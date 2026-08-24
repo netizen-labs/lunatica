@@ -11,7 +11,7 @@ export function Logo({ compact = false, className }: { compact?: boolean; classN
       {!compact && (
         <div className="leading-none">
           <span className="block text-[15px] font-semibold tracking-tight">Lunatica</span>
-          <span className="mt-1 block text-[10px] font-medium tracking-[.18em] text-zinc-500">VERSÃO 1.5</span>
+          <span className="mt-1 block text-[10px] font-medium tracking-[.18em] text-zinc-500">MODELO 1.5</span>
         </div>
       )}
     </div>

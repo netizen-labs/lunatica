@@ -1,6 +1,6 @@
 # Lunatica 1.5
 
-Lunatica 1.5 é uma aplicação web de chat com inteligência artificial, construída como um MVP utilizável e seguro. Ela oferece autenticação, múltiplas conversas persistentes, respostas em streaming, Markdown, edição, regeneração, temas e uma interface responsiva.
+Lunatica é uma aplicação web de chat com inteligência artificial, construída como um MVP utilizável e seguro. **Lunatica 1.5 é o nome do modelo**, não a versão do aplicativo. A plataforma oferece uma apresentação pública, autenticação, múltiplas conversas persistentes, respostas em streaming, Markdown, edição, regeneração, temas e uma interface responsiva.
 
 O frontend nunca recebe a chave do Gemini. O navegador autentica o usuário no Supabase e chama uma Edge Function; somente essa função acessa a Gemini API.
 

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowRight, Eye, EyeOff, KeyRound, Mail } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Mail } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Logo } from '../components/ui/Logo'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
@@ -8,7 +9,8 @@ import { friendlyError } from '../lib/utils'
 type AuthMode = 'login' | 'signup' | 'reset' | 'update'
 
 export function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>('login')
+  const [searchParams] = useSearchParams()
+  const [mode, setMode] = useState<AuthMode>(() => searchParams.get('mode') === 'signup' ? 'signup' : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -55,14 +57,17 @@ export function AuthPage() {
           <h1 className="text-5xl font-medium leading-[1.08] tracking-[-.04em]">Ideias mais claras.<br />Conversas que avançam.</h1>
           <p className="mt-6 max-w-md text-base leading-7 text-zinc-400">Uma assistente direta, útil e pronta para acompanhar seu raciocínio, do primeiro rascunho à resposta final.</p>
         </div>
-        <p className="text-xs text-zinc-600">Lunatica 1.5 · Suas conversas permanecem privadas</p>
+        <p className="text-xs text-zinc-600">Modelo Lunatica 1.5 · Suas conversas permanecem privadas</p>
         <div className="absolute -bottom-40 -right-28 h-[440px] w-[440px] rounded-full border border-lunar-400/10" />
         <div className="absolute -bottom-24 -right-12 h-[280px] w-[280px] rounded-full border border-lunar-400/10" />
       </section>
 
       <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-10">
         <div className="w-full max-w-sm animate-fade-in">
-          <Logo className="mb-12 lg:hidden" />
+          <div className="mb-10 flex items-center justify-between lg:justify-start">
+            <Logo className="lg:hidden" />
+            <Link to="/" className="inline-flex items-center gap-2 text-sm text-zinc-500 transition hover:text-zinc-900 dark:hover:text-white"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
+          </div>
           <div className="mb-8">
             <h2 className="text-3xl font-semibold tracking-[-.03em]">
               {currentMode === 'login' ? 'Entre na sua conta' : currentMode === 'signup' ? 'Crie sua conta' : currentMode === 'update' ? 'Defina sua nova senha' : 'Recupere sua senha'}
