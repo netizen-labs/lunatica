@@ -1,0 +1,4 @@
+project_id = "lunatica"
+
+[functions.chat]
+verify_jwt = true
