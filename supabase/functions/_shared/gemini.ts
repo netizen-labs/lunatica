@@ -42,7 +42,6 @@ export async function streamResponse(messages: HistoryMessage[], signal: AbortSi
         system_instruction: { parts: [{ text: LUNATICA_SYSTEM_PROMPT }] },
         contents: convertMessagesToGeminiFormat(messages),
         generationConfig: {
-          temperature: 0.7,
           maxOutputTokens: 8192,
         },
       }),
