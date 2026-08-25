@@ -88,7 +88,7 @@ export function OnboardingPage() {
           </div>}
 
           {step === 2 && <div className="animate-fade-in"><span className="micro-label">03 · PRONTA PARA DECOLAR</span><h2 className="mt-3 text-3xl font-semibold tracking-[-.035em]">Lunatica 1.5 está pronta.</h2><p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">Um modelo criado para colaborar, programar em nível sênior, escrever com cuidado e também se divertir com boas ideias.</p>
-            <div className="mt-8 grid gap-3 sm:grid-cols-2"><div className="feature-tile"><Code2 /><strong>Feita por uma pessoa</strong><span>A Lunatica foi criada por um único desenvolvedor: Lucas Gabriel R. Aguiar.</span></div><div className="feature-tile"><Heart /><strong>Apoie os próximos updates</strong><span>Seu feedback e apoio ajudam o projeto independente a continuar evoluindo.</span></div></div>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2"><div className="feature-tile"><Code2 /><strong>Feita por Lucas Gabriel</strong><span>A Lunatica foi feita pelo usuário e único desenvolvedor Lucas Gabriel R. Aguiar.</span></div><div className="feature-tile"><Heart /><strong>Apoie os próximos updates</strong><span>Seu feedback e apoio ajudam o projeto independente a continuar evoluindo.</span></div></div>
             <a href="mailto:core.healops@gmail.com?subject=Suporte%20Lunatica" className="mt-5 inline-flex items-center gap-2 text-sm text-lunar-300 hover:text-white"><Sparkles className="h-4 w-4" /> core.healops@gmail.com</a>
           </div>}
 

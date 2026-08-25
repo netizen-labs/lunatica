@@ -64,7 +64,7 @@ http://localhost:5173
 https://nitlabs-code.github.io/lunatica/
 ```
 
-6. Para exigir confirmação de email, mantenha **Confirm email** ativado. Para testes locais rápidos, ela pode ser desativada no painel.
+6. Mantenha **Confirm email** ativado. O cadastro mostra uma etapa de verificação com reenvio; contas sem `email_confirmed_at` não ficam aptas a pagamentos futuros.
 
 ## Gemini e Edge Function
 
@@ -74,7 +74,7 @@ Cadastre os secrets diretamente no Supabase:
 
 ```bash
 npx supabase secrets set GEMINI_API_KEY=SUA_CHAVE
-npx supabase secrets set GEMINI_MODEL=gemini-3.7-flash
+npx supabase secrets set GEMINI_MODEL=gemini-2.5-flash
 npx supabase functions deploy chat
 npx supabase functions deploy memory
 ```

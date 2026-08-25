@@ -1,9 +1,10 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { AtSign, Camera, Mail, UserRound } from 'lucide-react'
+import { AtSign, BadgeCheck, Camera, CircleAlert, Mail, RefreshCw, UserRound } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfile } from '../../contexts/ProfileContext'
 import { useToast } from '../../contexts/ToastContext'
 import { friendlyError, normalizeUsername, validateUsername } from '../../lib/utils'
+import { isEmailVerified } from '../../lib/auth'
 import { Modal } from '../ui/Modal'
 
 interface ProfileDialogProps { open: boolean; onClose: () => void }
@@ -13,7 +14,7 @@ export function ProfileDialog(props: ProfileDialogProps) {
 }
 
 function ProfileContent({ open, onClose }: ProfileDialogProps) {
-  const { user } = useAuth()
+  const { user, resendConfirmation } = useAuth()
   const { profile, avatarUrl, saveProfile, uploadAvatar } = useProfile()
   const { showToast } = useToast()
   const [name, setName] = useState(profile?.display_name || '')
@@ -44,6 +45,15 @@ function ProfileContent({ open, onClose }: ProfileDialogProps) {
   }
 
   const memberSince = user?.created_at ? new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date(user.created_at)) : '—'
+  const emailVerified = isEmailVerified(user)
+
+  async function resendEmail() {
+    if (!user?.email) return
+    setBusy(true)
+    try { await resendConfirmation(user.email); showToast('Email de confirmação reenviado.', 'success') }
+    catch (error) { showToast(friendlyError(error), 'error') }
+    finally { setBusy(false) }
+  }
 
   return (
     <Modal open={open} onClose={onClose} title="Seu perfil" description="Sua identidade e a forma como a Lunatica colabora com você." size="wide">
@@ -51,7 +61,7 @@ function ProfileContent({ open, onClose }: ProfileDialogProps) {
         <aside className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 text-center">
           <div className="avatar-frame mx-auto !h-24 !w-24 !rounded-3xl">{avatarUrl ? <img src={avatarUrl} alt="Foto do perfil" /> : <span>{(name || 'U').slice(0, 1).toUpperCase()}</span>}</div>
           <label className="btn-secondary mt-4 w-full cursor-pointer"><Camera className="h-4 w-4" /> Trocar foto<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void chooseAvatar(event)} disabled={busy} /></label>
-          <div className="mt-5 space-y-3 border-t border-white/10 pt-4 text-left text-xs text-zinc-500"><p className="flex gap-2"><Mail className="h-4 w-4 shrink-0" /><span className="min-w-0 truncate">{user?.email}</span></p><p className="flex gap-2"><UserRound className="h-4 w-4 shrink-0" /><span>Membro desde {memberSince}</span></p></div>
+          <div className="mt-5 space-y-3 border-t border-white/10 pt-4 text-left text-xs text-zinc-500"><p className="flex gap-2"><Mail className="h-4 w-4 shrink-0" /><span className="min-w-0 truncate">{user?.email}</span></p><p className={`flex gap-2 ${emailVerified ? 'text-emerald-300' : 'text-amber-300'}`}>{emailVerified ? <BadgeCheck className="h-4 w-4 shrink-0" /> : <CircleAlert className="h-4 w-4 shrink-0" />}<span>{emailVerified ? 'Email verificado' : 'Email não verificado'}</span></p>{!emailVerified && <button type="button" className="flex items-center gap-2 text-lunar-300 hover:text-white" onClick={() => void resendEmail()} disabled={busy}><RefreshCw className={`h-3.5 w-3.5 ${busy ? 'animate-spin' : ''}`} /> Reenviar confirmação</button>}<p className="flex gap-2"><UserRound className="h-4 w-4 shrink-0" /><span>Membro desde {memberSince}</span></p></div>
         </aside>
         <div className="min-w-0">
           <div className="grid gap-5 sm:grid-cols-2"><label className="text-sm font-medium">Nome de exibição<input className="field mt-2" value={name} onChange={(event) => setName(event.target.value)} maxLength={80} autoComplete="name" /></label><label className="text-sm font-medium">Nome de usuário<div className="relative mt-2"><AtSign className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-500" /><input className="field pl-10" value={username} onChange={(event) => setUsername(normalizeUsername(event.target.value))} maxLength={24} autoComplete="username" /></div>{username && usernameError && <span className="mt-1.5 block text-xs text-red-400">{usernameError}</span>}<span className="mt-1.5 block text-[11px] text-zinc-500">Apenas letras minúsculas, números, ponto e sublinhado.</span></label></div>

@@ -4,6 +4,8 @@ import { Logo } from './components/ui/Logo'
 import { useAuth } from './contexts/AuthContext'
 import { useProfile } from './contexts/ProfileContext'
 import { useTheme } from './contexts/ThemeContext'
+import { useToast } from './contexts/ToastContext'
+import { isEmailVerified } from './lib/auth'
 
 const AuthPage = lazy(() => import('./pages/AuthPage').then((module) => ({ default: module.AuthPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ default: module.ChatPage })))
@@ -44,7 +46,22 @@ function PublicAuth() {
 }
 
 export default function App() {
-  const { loading, recovering } = useAuth()
+  const { loading, recovering, session, user } = useAuth()
+  const { showToast } = useToast()
+
+  useEffect(() => {
+    if (loading) return
+    const query = new URLSearchParams(window.location.search)
+    const authMarker = query.get('auth')
+    const authError = query.get('auth_error')
+    if ((authMarker === 'verified' || authError) && isEmailVerified(user)) {
+      showToast(authError ? 'Seu email já estava confirmado. Você pode continuar.' : 'Email confirmado com sucesso.', 'success')
+      window.history.replaceState({}, '', `${window.location.pathname}${window.location.hash || '#/'}`)
+      return
+    }
+    if (authMarker === 'verified' && !session) window.location.hash = '/login'
+  }, [loading, session, showToast, user])
+
   if (loading) return <LoadingScreen />
 
   return (

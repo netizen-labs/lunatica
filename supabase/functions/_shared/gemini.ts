@@ -72,12 +72,14 @@ export class GeminiError extends Error {
 
 export async function streamResponse(messages: HistoryMessage[], signal: AbortSignal, options: StreamResponseOptions = {}) {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
-  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-3.7-flash'
+  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash'
   if (!apiKey) throw new GeminiError(500, 'Gemini não configurado')
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
-    {
+  let response: Response
+  try {
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`,
+      {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,11 +90,16 @@ export async function streamResponse(messages: HistoryMessage[], signal: AbortSi
         contents: addAttachments(convertMessagesToGeminiFormat(messages), options.attachments ?? []),
         generationConfig: {
           maxOutputTokens: 3072,
+          thinkingConfig: { thinkingBudget: 1024 },
         },
       }),
-      signal,
-    },
-  )
+        signal: AbortSignal.any([signal, AbortSignal.timeout(75_000)]),
+      },
+    )
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw new GeminiError(504, 'A IA demorou demais. Tente novamente.')
+    throw error
+  }
 
   if (!response.ok) {
     const details = await response.text()

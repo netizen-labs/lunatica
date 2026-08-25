@@ -27,6 +27,7 @@ export function friendlyError(error: unknown) {
     if (/invalid login credentials/i.test(error.message)) return 'Email ou senha incorretos.'
     if (/email not confirmed/i.test(error.message)) return 'Confirme seu email antes de entrar.'
     if (/already registered|user already exists/i.test(error.message)) return 'Já existe uma conta com esse email.'
+    if (/security purposes|after \d+ seconds|email rate limit|over_email_send_rate_limit/i.test(error.message)) return 'Aguarde cerca de 60 segundos antes de pedir outro email.'
     if (/anexo|crédito|limite diário|no máximo 4|12 MB|5 MB/i.test(error.message)) return error.message.replace(/^\d{3}:\s*/, '')
     if (/401|jwt|session|auth/i.test(error.message)) return 'Sua sessão expirou. Entre novamente.'
     if (/429|rate limit/i.test(error.message)) return 'Muitas solicitações. Aguarde um pouco e tente novamente.'

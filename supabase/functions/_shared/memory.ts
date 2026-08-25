@@ -9,7 +9,7 @@ const categories = new Set<MemoryCategory>(['identity', 'education', 'work', 'pr
 
 export async function summarizeMemories(content: string, existing: string[], manual: boolean, signal: AbortSignal) {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
-  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-3.7-flash'
+  const model = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash'
   if (!apiKey) throw new Error('Gemini não configurado')
 
   const prompt = `Você organiza a memória pessoal da Lunatica 1.5.
@@ -32,10 +32,8 @@ ${content.slice(0, 4000)}`
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         maxOutputTokens: 512,
-        responseFormat: {
-          text: {
-            mimeType: 'application/json',
-            schema: {
+        responseMimeType: 'application/json',
+        responseSchema: {
               type: 'object',
               properties: {
                 memories: {
@@ -52,12 +50,10 @@ ${content.slice(0, 4000)}`
                 },
               },
               required: ['memories'],
-            },
-          },
         },
       },
     }),
-    signal,
+    signal: AbortSignal.any([signal, AbortSignal.timeout(45_000)]),
   })
 
   if (!response.ok) {

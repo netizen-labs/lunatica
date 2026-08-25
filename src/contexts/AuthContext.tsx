@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
+import { appAuthRedirectUrl } from '../lib/auth'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 interface AuthContextValue {
@@ -9,7 +10,8 @@ interface AuthContextValue {
   configured: boolean
   recovering: boolean
   signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, displayName: string) => Promise<void>
+  signUp: (email: string, password: string, displayName: string) => Promise<{ requiresEmailConfirmation: boolean }>
+  resendConfirmation: (email: string) => Promise<void>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   updatePassword: (password: string) => Promise<void>
@@ -67,7 +69,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error
     },
     signUp: async (email, password, displayName) => {
-      const { error } = await withAuthTimeout(supabase.auth.signUp({ email, password, options: { data: { display_name: displayName } } }))
+      const { data, error } = await withAuthTimeout(supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: displayName },
+          emailRedirectTo: appAuthRedirectUrl('verified'),
+        },
+      }))
+      if (error) throw error
+      return { requiresEmailConfirmation: !data.session }
+    },
+    resendConfirmation: async (email) => {
+      const { error } = await withAuthTimeout(supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: appAuthRedirectUrl('verified') },
+      }))
       if (error) throw error
     },
     signOut: async () => {
@@ -75,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error
     },
     resetPassword: async (email) => {
-      const redirectTo = `${window.location.origin}${window.location.pathname}`
+      const redirectTo = appAuthRedirectUrl('recovery')
       const { error } = await withAuthTimeout(supabase.auth.resetPasswordForEmail(email, { redirectTo }))
       if (error) throw error
     },

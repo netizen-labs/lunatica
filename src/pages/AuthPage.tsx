@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowLeft, ArrowRight, Eye, EyeOff, KeyRound, Mail } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CircleAlert, Eye, EyeOff, KeyRound, Mail, MailCheck, RefreshCw } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Logo } from '../components/ui/Logo'
 import { useAuth } from '../contexts/AuthContext'
@@ -16,7 +16,9 @@ export function AuthPage() {
   const [displayName, setDisplayName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
-  const { signIn, signUp, resetPassword, updatePassword, configured, recovering } = useAuth()
+  const [verificationEmail, setVerificationEmail] = useState('')
+  const [resent, setResent] = useState(false)
+  const { signIn, signUp, resendConfirmation, resetPassword, updatePassword, configured, recovering } = useAuth()
   const currentMode: AuthMode = recovering ? 'update' : mode
   const { showToast } = useToast()
 
@@ -27,9 +29,11 @@ export function AuthPage() {
     try {
       if (currentMode === 'login') await signIn(email, password)
       if (currentMode === 'signup') {
-        await signUp(email, password, displayName)
-        showToast('Conta criada. Verifique seu email para confirmar o cadastro.', 'success')
-        setMode('login')
+        const result = await signUp(email, password, displayName)
+        if (result.requiresEmailConfirmation) {
+          setVerificationEmail(email.trim().toLowerCase())
+          showToast('Conta criada. Enviamos o link de confirmação.', 'success')
+        }
       }
       if (currentMode === 'reset') {
         await resetPassword(email)
@@ -41,12 +45,31 @@ export function AuthPage() {
         showToast('Senha atualizada com sucesso.', 'success')
       }
     } catch (error) {
+      if (currentMode === 'login' && error instanceof Error && /email not confirmed/i.test(error.message)) {
+        setVerificationEmail(email.trim().toLowerCase())
+      }
       showToast(friendlyError(error), 'error')
       if (import.meta.env.DEV) console.error(error)
     } finally {
       setBusy(false)
     }
   }
+
+  async function resend() {
+    if (!verificationEmail) return
+    setBusy(true)
+    try {
+      await resendConfirmation(verificationEmail)
+      setResent(true)
+      showToast('Novo email de confirmação enviado.', 'success')
+    } catch (error) {
+      showToast(friendlyError(error), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const authLinkError = new URLSearchParams(window.location.search).get('auth_error')
 
   return (
     <main className="app-shell grid min-h-screen lg:grid-cols-[1.05fr_.95fr]">
@@ -79,7 +102,9 @@ export function AuthPage() {
 
           {!configured && <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">Supabase ainda não configurado. Copie <code>.env.example</code> para <code>.env</code> e preencha os valores públicos.</div>}
 
-          <form className="space-y-4" onSubmit={submit}>
+          {authLinkError && <div className="mb-5 flex gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.08] p-4 text-sm leading-6 text-amber-200"><CircleAlert className="mt-1 h-4 w-4 shrink-0" /><span>Esse link já foi utilizado ou expirou. Tente entrar normalmente; se o email ainda não estiver confirmado, informe seus dados e use o reenvio.</span></div>}
+
+          {verificationEmail ? <section className="rounded-2xl border border-lunar-400/20 bg-lunar-500/[0.055] p-5 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-lunar-500/15 text-lunar-300"><MailCheck className="h-6 w-6" /></span><h3 className="mt-4 text-lg font-semibold">Verifique seu email</h3><p className="mt-2 text-sm leading-6 text-zinc-400">Enviamos um link para <strong className="text-zinc-200">{verificationEmail}</strong>. Abra apenas o email mais recente e clique uma vez.</p>{resent && <p className="mt-3 text-xs text-emerald-300">Novo link enviado. O link anterior deixou de ser válido.</p>}<button type="button" className="btn-secondary mt-5 w-full" onClick={() => void resend()} disabled={busy}><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />{busy ? 'Enviando…' : 'Reenviar confirmação'}</button><button type="button" className="mt-4 text-xs text-zinc-500 hover:text-white" onClick={() => { setVerificationEmail(''); setResent(false); setMode('login') }}>Voltar para o login</button></section> : <form className="space-y-4" onSubmit={submit}>
             {currentMode === 'signup' && (
               <label className="block text-sm font-medium">Nome
                 <input className="field mt-2" value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" required maxLength={80} placeholder="Como devemos chamar você?" disabled={busy} />
@@ -95,9 +120,9 @@ export function AuthPage() {
             )}
             {currentMode === 'login' && <button type="button" className="text-sm text-zinc-500 hover:text-lunar-500" onClick={() => setMode('reset')}>Esqueci minha senha</button>}
             <button type="submit" className="btn-primary w-full" disabled={busy}>{busy ? currentMode === 'login' ? 'Conectando…' : 'Processando…' : currentMode === 'login' ? 'Entrar' : currentMode === 'signup' ? 'Criar conta' : currentMode === 'update' ? 'Atualizar senha' : 'Enviar link'} {!busy && <ArrowRight className="h-4 w-4" />}</button>
-          </form>
+          </form>}
 
-          {currentMode !== 'update' && <div className="mt-6 text-center text-sm text-zinc-500">
+          {!verificationEmail && currentMode !== 'update' && <div className="mt-6 text-center text-sm text-zinc-500">
             {currentMode === 'login' ? <>Não possui conta? <button className="font-medium text-zinc-900 hover:text-lunar-500 dark:text-white" onClick={() => setMode('signup')}>Criar conta</button></> : <>Já possui conta? <button className="font-medium text-zinc-900 hover:text-lunar-500 dark:text-white" onClick={() => setMode('login')}>Entrar</button></>}
           </div>}
           <p className="mt-10 text-center text-[11px] text-zinc-600">Precisa de ajuda? <a className="text-zinc-400 hover:text-lunar-300" href="mailto:core.healops@gmail.com">core.healops@gmail.com</a></p>
