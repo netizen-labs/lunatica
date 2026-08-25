@@ -13,6 +13,13 @@ export interface ChatResponse {
   content: string
 }
 
+export interface UsageStatus {
+  limit: number
+  used: number
+  remaining: number
+  resetsAt: string
+}
+
 export interface ApiErrorBody {
   error?: string
   code?: string

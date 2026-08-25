@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
-export type Theme = 'dark' | 'light' | 'system'
+export type Theme = 'black' | 'dark'
 
 interface ThemeContextValue {
   theme: Theme
@@ -10,20 +10,19 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 function applyTheme(theme: Theme) {
-  const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  document.documentElement.classList.toggle('dark', dark)
-  document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+  document.documentElement.classList.add('dark')
+  document.documentElement.classList.toggle('black', theme === 'black')
+  document.documentElement.style.colorScheme = 'dark'
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => (localStorage.getItem('lunatica-theme') as Theme | null) ?? 'dark')
+  const [theme, setThemeState] = useState<Theme>(() => {
+    const saved = localStorage.getItem('lunatica-theme')
+    return saved === 'dark' ? 'dark' : 'black'
+  })
 
   useEffect(() => {
     applyTheme(theme)
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const listener = () => theme === 'system' && applyTheme(theme)
-    media.addEventListener('change', listener)
-    return () => media.removeEventListener('change', listener)
   }, [theme])
 
   const value = useMemo(() => ({

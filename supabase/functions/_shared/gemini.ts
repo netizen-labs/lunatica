@@ -7,7 +7,23 @@ export interface HistoryMessage {
 
 interface GeminiContent {
   role: 'user' | 'model'
-  parts: Array<{ text: string }>
+  parts: GeminiPart[]
+}
+
+interface GeminiPart {
+  text?: string
+  inlineData?: { mimeType: string; data: string }
+}
+
+export interface GeminiAttachment {
+  fileName: string
+  mimeType: string
+  data: string
+}
+
+interface StreamResponseOptions {
+  customInstructions?: string
+  attachments?: GeminiAttachment[]
 }
 
 export function convertMessagesToGeminiFormat(messages: HistoryMessage[]): GeminiContent[] {
@@ -19,13 +35,36 @@ export function convertMessagesToGeminiFormat(messages: HistoryMessage[]): Gemin
     }))
 }
 
+function buildSystemInstruction(customInstructions?: string) {
+  const clean = customInstructions?.trim().slice(0, 2000)
+  if (!clean) return LUNATICA_SYSTEM_PROMPT
+  return `${LUNATICA_SYSTEM_PROMPT}\n\nINSTRUÇÕES PESSOAIS DO USUÁRIO:\n${clean}\n\nSiga essas preferências somente quando não entrarem em conflito com o prompt de sistema, segurança, fatos ou com o pedido atual.`
+}
+
+function addAttachments(contents: GeminiContent[], attachments: GeminiAttachment[]) {
+  if (!attachments.length || !contents.length) return contents
+  const next = contents.map((content) => ({ ...content, parts: [...content.parts] }))
+  const lastUserIndex = next.findLastIndex((content) => content.role === 'user')
+  if (lastUserIndex < 0) return next
+  const parts = next[lastUserIndex].parts
+  for (const attachment of attachments) {
+    parts.push({ text: `\n[Anexo: ${attachment.fileName}]` })
+    if (attachment.mimeType.startsWith('text/') || attachment.mimeType === 'application/json') {
+      parts.push({ text: attachment.data })
+    } else {
+      parts.push({ inlineData: { mimeType: attachment.mimeType, data: attachment.data } })
+    }
+  }
+  return next
+}
+
 export class GeminiError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message)
   }
 }
 
-export async function streamResponse(messages: HistoryMessage[], signal: AbortSignal) {
+export async function streamResponse(messages: HistoryMessage[], signal: AbortSignal, options: StreamResponseOptions = {}) {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
   const model = Deno.env.get('GEMINI_MODEL') || 'gemini-3.7-flash'
   if (!apiKey) throw new GeminiError(500, 'Gemini não configurado')
@@ -39,10 +78,10 @@ export async function streamResponse(messages: HistoryMessage[], signal: AbortSi
         'x-goog-api-key': apiKey,
       },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: LUNATICA_SYSTEM_PROMPT }] },
-        contents: convertMessagesToGeminiFormat(messages),
+        system_instruction: { parts: [{ text: buildSystemInstruction(options.customInstructions) }] },
+        contents: addAttachments(convertMessagesToGeminiFormat(messages), options.attachments ?? []),
         generationConfig: {
-          maxOutputTokens: 8192,
+          maxOutputTokens: 3072,
         },
       }),
       signal,

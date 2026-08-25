@@ -4,53 +4,130 @@
 
 @layer base {
   :root {
+    --app-bg: #101014;
+    --panel: #16151b;
+    --panel-elevated: #1c1a22;
+    --sidebar: #0d0c11;
+    --line: rgba(255,255,255,.095);
+    --muted: #92909b;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #27272a;
-    background: #fafafa;
+    color: #f5f3f7;
+    background: var(--app-bg);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
   }
 
-  :root.dark {
-    color: #f4f4f5;
-    background: #0c0b10;
+  :root.black {
+    --app-bg: #050507;
+    --panel: #0b0a0e;
+    --panel-elevated: #111015;
+    --sidebar: #08070a;
+    --line: rgba(255,255,255,.105);
+    --muted: #85828d;
   }
 
-  * { @apply border-zinc-200 dark:border-white/10; }
-  body { @apply m-0 min-h-screen bg-zinc-50 text-zinc-800 antialiased dark:bg-ink-950 dark:text-zinc-100; }
+  * { border-color: var(--line); }
+  body { margin: 0; min-height: 100vh; background: var(--app-bg); color: #f5f3f7; -webkit-font-smoothing: antialiased; }
   button, input, textarea, select { font: inherit; }
   button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
-    @apply outline-none ring-2 ring-lunar-400 ring-offset-2 ring-offset-white dark:ring-offset-ink-950;
+    @apply outline-none ring-2 ring-lunar-400 ring-offset-2;
+    ring-offset-color: var(--app-bg);
   }
   ::selection { @apply bg-lunar-500/30; }
-  * { scrollbar-width: thin; scrollbar-color: rgba(161,161,170,.45) transparent; }
+  * { scrollbar-width: thin; scrollbar-color: rgba(161,161,170,.38) transparent; }
 }
 
 @layer components {
-  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-lunar-500 dark:hover:bg-lunar-400; }
-  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border bg-white px-4 py-2.5 text-sm font-medium transition hover:bg-zinc-100 disabled:opacity-50 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]; }
-  .field { @apply w-full rounded-xl border bg-white px-3.5 py-3 text-sm outline-none transition placeholder:text-zinc-400 focus:border-lunar-400 dark:bg-white/[0.04]; }
-  .icon-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-200/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/[0.08] dark:hover:text-white; }
+  .app-shell { background: var(--app-bg); color: #f5f3f7; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-lunar-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-lunar-400 disabled:cursor-not-allowed disabled:opacity-40; box-shadow: 0 8px 28px rgba(139,92,246,.16); }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40; background: rgba(255,255,255,.035); }
+  .field { @apply w-full rounded-xl border px-3.5 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-lunar-400; background: rgba(255,255,255,.035); }
+  .icon-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-35; }
+  .micro-label { @apply text-[10px] font-semibold uppercase tracking-[.2em] text-zinc-500; }
+
+  .mission-header { @apply flex h-16 shrink-0 items-center gap-3 border-b px-4 backdrop-blur-md sm:px-6; border-color: var(--line); background: color-mix(in srgb, var(--app-bg) 88%, transparent); }
+  .status-pill { @apply items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-zinc-400; background: rgba(255,255,255,.025); }
+  .status-dot { @apply inline-flex items-center gap-2 rounded-full border border-emerald-400/15 bg-emerald-400/[0.06] px-2.5 py-1 text-[10px] uppercase tracking-wider text-emerald-300; }
+  .status-dot::before { content: ''; @apply h-1.5 w-1.5 rounded-full bg-emerald-400; box-shadow: 0 0 12px rgba(52,211,153,.8); }
+
+  .guest-sidebar, .main-sidebar { @apply flex h-full w-[296px] flex-col border-r; background: var(--sidebar); border-color: var(--line); }
+  .new-chat-button { @apply flex w-full items-center gap-3 rounded-xl border border-lunar-400/20 bg-lunar-500/[0.07] px-3.5 py-3 text-sm font-medium text-zinc-100 transition hover:border-lunar-400/45 hover:bg-lunar-500/[0.11]; }
+  .sidebar-feature { @apply flex gap-3 text-sm text-zinc-500; }
+  .sidebar-feature > svg { @apply mt-0.5 h-4 w-4 shrink-0 text-lunar-300; }
+  .sidebar-feature strong { @apply block font-medium text-zinc-200; }
+  .sidebar-feature span { @apply mt-1 block text-xs leading-5; }
+
+  .lunar-orbit { @apply pointer-events-none absolute rounded-full border border-lunar-400/10; }
+  .lunar-orbit::before { content: ''; @apply absolute h-1.5 w-1.5 rounded-full bg-lunar-300; box-shadow: 0 0 18px rgba(196,181,253,.75); }
+  .lunar-orbit-a { @apply -right-36 top-32 h-[480px] w-[480px]; transform: rotate(-18deg); }
+  .lunar-orbit-a::before { left: 56px; top: 82px; }
+  .lunar-orbit-b { @apply -bottom-52 left-1/4 h-[380px] w-[680px]; transform: rotate(12deg); }
+  .lunar-orbit-b::before { right: 88px; top: 30px; }
+
+  .composer-dock { @apply shrink-0 pt-2; background: linear-gradient(to top, var(--app-bg) 72%, transparent); }
+  .composer-shell { @apply overflow-hidden rounded-2xl border transition focus-within:border-lunar-400/60; background: var(--panel-elevated); box-shadow: 0 16px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.025); }
+  .composer-action { @apply mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lunar-500 text-white transition hover:bg-lunar-400 disabled:bg-white/[0.07] disabled:text-zinc-600; }
+  .composer-action.stop { @apply bg-white text-zinc-950 hover:bg-zinc-200; }
+  .attachment-chip { @apply inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.045] px-2 py-1.5 text-[11px] text-zinc-300; }
+  .attachment-chip small { @apply text-[9px] text-zinc-600; }
+  .attachment-chip button { @apply ml-0.5 rounded p-0.5 text-zinc-500 hover:bg-white/10 hover:text-white; }
+
+  .user-message-card { @apply rounded-2xl rounded-br-md border border-lunar-400/10 bg-lunar-500/[0.12] px-4 py-3 text-[15px] leading-6 text-zinc-100; box-shadow: inset 0 1px rgba(255,255,255,.025); }
+  .assistant-mark { @apply mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-lunar-400/20 bg-lunar-500/10 text-lunar-300; box-shadow: 0 0 20px rgba(139,92,246,.08); }
+  .suggestion-card { @apply grid grid-cols-[28px_24px_1fr] items-center rounded-xl border px-4 py-4 text-left text-sm font-medium text-zinc-300 transition hover:-translate-y-0.5 hover:border-lunar-400/35 hover:bg-lunar-500/[0.045]; background: rgba(255,255,255,.02); }
+
+  .guest-suggestion { @apply flex min-h-28 flex-col items-start rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:border-lunar-400/35 hover:bg-lunar-500/[0.045]; background: rgba(255,255,255,.018); }
+  .guest-suggestion > span { @apply text-[9px] tracking-widest text-zinc-700; }
+  .guest-suggestion > svg { @apply mt-3 text-lunar-300; }
+  .guest-suggestion > strong { @apply mt-auto text-xs font-medium text-zinc-300; }
+  .model-card { @apply relative rounded-[28px] border border-white/10 p-6; background: linear-gradient(145deg, rgba(139,92,246,.09), rgba(255,255,255,.018) 38%, rgba(255,255,255,.01)); box-shadow: 0 30px 90px rgba(0,0,0,.42); }
+  .model-card::before { content: ''; @apply pointer-events-none absolute inset-x-10 top-0 h-px; background: linear-gradient(to right, transparent, rgba(196,181,253,.65), transparent); }
+  .preview-user { @apply max-w-[84%] rounded-2xl rounded-br-md border border-white/10 bg-white/[0.065] px-4 py-3 text-sm leading-6 text-zinc-200; }
+  .signal-stat { @apply rounded-xl border border-white/10 bg-black/15 p-2.5; }
+  .signal-stat strong { @apply block text-xs text-lunar-300; }
+  .signal-stat span { @apply text-[9px] uppercase tracking-wider text-zinc-600; }
+
+  .avatar-frame { @apply flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-lunar-400/20 bg-lunar-500/10 text-xl font-semibold text-lunar-300; }
+  .avatar-frame img { @apply h-full w-full object-cover; }
+  .theme-card { @apply flex items-center gap-3 rounded-xl border p-3 text-left transition hover:border-white/20; background: rgba(255,255,255,.02); }
+  .theme-card.active { @apply border-lunar-400/60 bg-lunar-500/[0.07]; }
+  .theme-card strong { @apply block text-sm font-medium; }
+  .theme-card small { @apply mt-0.5 block text-[11px] text-zinc-500; }
+  .theme-swatch { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-lunar-300; }
+  .theme-swatch.black { background: #020203; }
+  .theme-swatch.dark { background: #1a1920; }
+  .feature-tile { @apply flex min-h-44 flex-col rounded-2xl border border-white/10 p-5; background: rgba(255,255,255,.025); }
+  .feature-tile svg { @apply h-5 w-5 text-lunar-300; }
+  .feature-tile strong { @apply mt-8 text-sm; }
+  .feature-tile span { @apply mt-2 text-xs leading-5 text-zinc-500; }
+  .settings-tab { @apply flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-zinc-500 transition hover:bg-white/[0.05] hover:text-zinc-200; }
+  .settings-tab.active { @apply bg-lunar-500/[0.09] text-lunar-300; }
+  .settings-row, .danger-row { @apply mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/[0.05]; }
+  .settings-row > svg, .danger-row > svg { @apply shrink-0 text-zinc-500; }
+  .settings-row strong, .danger-row strong { @apply block text-sm font-medium; }
+  .settings-row small, .danger-row small { @apply block text-[11px] text-zinc-500; }
+  .danger-row { @apply text-red-400 hover:bg-red-500/[0.08]; }
+  .danger-row > svg { @apply text-red-400; }
 }
 
-.markdown { @apply text-[15px] leading-7 text-zinc-700 dark:text-zinc-200; }
+.markdown { @apply text-[15px] leading-7 text-zinc-300; }
 .markdown > *:first-child { margin-top: 0; }
 .markdown > *:last-child { margin-bottom: 0; }
 .markdown p { @apply my-3; }
-.markdown h1 { @apply mb-3 mt-7 text-2xl font-semibold tracking-tight; }
-.markdown h2 { @apply mb-3 mt-6 text-xl font-semibold tracking-tight; }
-.markdown h3 { @apply mb-2 mt-5 text-lg font-semibold; }
+.markdown h1 { @apply mb-3 mt-7 text-2xl font-semibold tracking-tight text-white; }
+.markdown h2 { @apply mb-3 mt-6 text-xl font-semibold tracking-tight text-white; }
+.markdown h3 { @apply mb-2 mt-5 text-lg font-semibold text-white; }
 .markdown ul { @apply my-3 list-disc space-y-1 pl-6; }
 .markdown ol { @apply my-3 list-decimal space-y-1 pl-6; }
-.markdown a { @apply text-violet-600 underline decoration-violet-400/50 underline-offset-4 hover:text-violet-500 dark:text-lunar-300; }
-.markdown blockquote { @apply my-4 border-l-2 border-lunar-400 pl-4 text-zinc-500 dark:text-zinc-400; }
+.markdown a { @apply text-lunar-300 underline decoration-violet-400/50 underline-offset-4 hover:text-violet-300; }
+.markdown blockquote { @apply my-4 border-l-2 border-lunar-400 pl-4 text-zinc-500; }
 .markdown table { @apply my-4 w-full border-collapse overflow-hidden text-sm; }
-.markdown th { @apply border bg-zinc-100 px-3 py-2 text-left font-semibold dark:bg-white/[0.05]; }
-.markdown td { @apply border px-3 py-2 align-top; }
-.markdown code:not(pre code) { @apply rounded bg-zinc-200/70 px-1.5 py-0.5 font-mono text-[.9em] text-violet-700 dark:bg-white/10 dark:text-lunar-300; }
-.markdown pre { @apply my-0 overflow-x-auto rounded-xl border bg-[#111015] p-4 pt-12 text-sm text-zinc-100; }
+.markdown th { @apply border border-white/10 bg-white/[0.05] px-3 py-2 text-left font-semibold; }
+.markdown td { @apply border border-white/10 px-3 py-2 align-top; }
+.markdown code:not(pre code) { @apply rounded bg-white/[0.08] px-1.5 py-0.5 font-mono text-[.9em] text-lunar-300; }
+.markdown pre { @apply my-0 overflow-x-auto rounded-xl border border-white/10 bg-[#09080c] p-4 pt-12 text-sm text-zinc-100; }
 .markdown pre code { @apply font-mono; }
-.markdown hr { @apply my-6; }
+.markdown hr { @apply my-6 border-white/10; }
 
 .hljs-comment, .hljs-quote { color: #8b8b98; }
 .hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #c4b5fd; }

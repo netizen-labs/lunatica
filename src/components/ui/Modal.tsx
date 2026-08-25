@@ -7,9 +7,10 @@ interface ModalProps {
   title: string
   description?: string
   children: ReactNode
+  size?: 'default' | 'wide'
 }
 
-export function Modal({ open, onClose, title, description, children }: ModalProps) {
+export function Modal({ open, onClose, title, description, children, size = 'default' }: ModalProps) {
   useEffect(() => {
     if (!open) return
     const onKeyDown = (event: KeyboardEvent) => event.key === 'Escape' && onClose()
@@ -21,7 +22,7 @@ export function Modal({ open, onClose, title, description, children }: ModalProp
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <button type="button" className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-[2px]" onClick={onClose} aria-label="Fechar janela" />
-      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border bg-white p-6 shadow-2xl dark:bg-ink-850">
+      <div className={`relative max-h-[90vh] w-full overflow-y-auto rounded-2xl border bg-white p-6 shadow-2xl dark:bg-ink-850 ${size === 'wide' ? 'max-w-3xl' : 'max-w-md'}`}>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h2 id="modal-title" className="text-lg font-semibold tracking-tight">{title}</h2>

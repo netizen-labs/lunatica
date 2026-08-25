@@ -5,6 +5,7 @@ import App from './App'
 import { AuthProvider } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { ToastProvider } from './contexts/ToastContext'
+import { ProfileProvider } from './contexts/ProfileContext'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')!).render(
       <ToastProvider>
         <HashRouter>
           <AuthProvider>
-            <App />
+            <ProfileProvider>
+              <App />
+            </ProfileProvider>
           </AuthProvider>
         </HashRouter>
       </ToastProvider>

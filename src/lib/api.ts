@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
-import type { ApiErrorBody, ChatRequest } from '../types/chat'
+import type { ApiErrorBody, ChatRequest, UsageStatus } from '../types/chat'
 import { supabaseProjectUrl, supabasePublicKey } from './supabase'
 
 interface StreamChatOptions {
@@ -66,4 +66,21 @@ export async function streamChatResponse({ conversationId, session, signal, onTe
       if (line.startsWith('data:')) onText(textFromGeminiEvent(line.slice(5).trim()))
     }
   }
+}
+
+export async function getUsageStatus(session: Session, signal?: AbortSignal): Promise<UsageStatus> {
+  if (!supabaseProjectUrl) throw new Error('Supabase não configurado')
+  const response = await fetch(`${supabaseProjectUrl}/functions/v1/chat`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: supabasePublicKey,
+    },
+    signal,
+  })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new Error(`${response.status}: ${body.error || 'Falha ao consultar o limite diário'}`)
+  }
+  return response.json() as Promise<UsageStatus>
 }

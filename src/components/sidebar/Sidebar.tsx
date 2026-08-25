@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, LogOut, Menu, MessageSquare, MoreHorizontal, Pencil, Plus, Settings, Trash2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Coins, LogOut, Menu, MessageSquare, MoreHorizontal, Pencil, Plus, Settings, Trash2, X } from 'lucide-react'
 import type { Conversation } from '../../types/database'
 import { cn, formatRelativeDate } from '../../lib/utils'
 import { Logo } from '../ui/Logo'
@@ -11,6 +11,9 @@ interface SidebarProps {
   loading: boolean
   mobileOpen: boolean
   userLabel: string
+  username?: string | null
+  avatarUrl?: string | null
+  remainingCredits?: number
   onMobileClose: () => void
   onNewChat: () => void
   onSelect: (id: string) => void
@@ -47,14 +50,14 @@ export function Sidebar(props: SidebarProps) {
   }
 
   const content = (
-    <aside className={cn('flex h-full flex-col border-r bg-zinc-100/80 transition-[width] duration-200 dark:bg-ink-900', collapsed ? 'w-20' : 'w-[286px]')}>
+    <aside className={cn('main-sidebar transition-[width] duration-200', collapsed ? '!w-20' : 'w-[296px]')}>
       <div className={cn('flex h-20 items-center', collapsed ? 'justify-center px-3' : 'justify-between px-4')}>
         <Logo compact={collapsed} />
         {!collapsed && <button type="button" onClick={props.onMobileClose} className="icon-btn lg:hidden" aria-label="Fechar menu"><X className="h-5 w-5" /></button>}
       </div>
 
       <div className="px-3">
-        <button type="button" onClick={() => { props.onNewChat(); props.onMobileClose() }} className={cn('flex w-full items-center rounded-xl border bg-white font-medium shadow-sm transition hover:border-lunar-400/60 dark:bg-white/[0.04]', collapsed ? 'h-11 justify-center' : 'gap-3 px-3.5 py-3 text-sm')} aria-label="Novo chat">
+        <button type="button" onClick={() => { props.onNewChat(); props.onMobileClose() }} className={cn('new-chat-button', collapsed ? 'h-11 justify-center !px-0' : '')} aria-label="Novo chat">
           <Plus className="h-4 w-4" />{!collapsed && <span>Novo chat</span>}
         </button>
       </div>
@@ -77,10 +80,11 @@ export function Sidebar(props: SidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t p-3">
+      <div className="border-t border-white/10 p-3">
+        {!collapsed && props.remainingCredits !== undefined && <div className="mb-2 rounded-xl border border-lunar-400/15 bg-lunar-500/[0.06] px-3 py-2.5"><div className="flex items-center justify-between text-xs"><span className="flex items-center gap-2 text-zinc-300"><Coins className="h-3.5 w-3.5 text-lunar-300" /> Créditos hoje</span><strong className="text-lunar-300">{props.remainingCredits}</strong></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-lunar-400" style={{ width: `${Math.min(100, (props.remainingCredits / 30) * 100)}%` }} /></div></div>}
         <button type="button" onClick={props.onSettings} className={cn('flex w-full items-center rounded-xl text-left transition hover:bg-zinc-200/70 dark:hover:bg-white/[0.06]', collapsed ? 'h-11 justify-center' : 'gap-3 px-2 py-2')} aria-label="Configurações">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lunar-500/15 text-xs font-semibold text-violet-600 dark:text-lunar-300">{props.userLabel.slice(0, 1).toUpperCase()}</div>
-          {!collapsed && <span className="min-w-0 flex-1 truncate text-sm font-medium">{props.userLabel}</span>}
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-lunar-500/15 text-xs font-semibold text-lunar-300">{props.avatarUrl ? <img src={props.avatarUrl} alt="" className="h-full w-full object-cover" /> : props.userLabel.slice(0, 1).toUpperCase()}</div>
+          {!collapsed && <span className="min-w-0 flex-1"><strong className="block truncate text-sm font-medium">{props.userLabel}</strong>{props.username && <small className="block truncate text-[10px] text-zinc-500">@{props.username}</small>}</span>}
           {!collapsed && <Settings className="h-4 w-4 text-zinc-400" />}
         </button>
         <button type="button" onClick={() => void props.onLogout()} className={cn('mt-1 flex w-full items-center rounded-xl text-zinc-500 transition hover:bg-zinc-200/70 hover:text-zinc-900 dark:hover:bg-white/[0.06] dark:hover:text-white', collapsed ? 'h-10 justify-center' : 'gap-3 px-3 py-2 text-xs')} aria-label="Sair"><LogOut className="h-4 w-4" />{!collapsed && 'Sair'}</button>

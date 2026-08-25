@@ -16,6 +16,20 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+const AUTH_TIMEOUT_MS = 12_000
+const SESSION_RESTORE_TIMEOUT_MS = 2_500
+
+async function withAuthTimeout<T>(operation: Promise<T>, timeoutMs = AUTH_TIMEOUT_MS) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Auth timeout')), timeoutMs)
+  })
+  try {
+    return await Promise.race([operation, timeout])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -27,10 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      setLoading(false)
-    })
+    void withAuthTimeout(supabase.auth.getSession(), SESSION_RESTORE_TIMEOUT_MS)
+      .then(({ data }) => setSession(data.session))
+      .catch((error: unknown) => {
+        if (import.meta.env.DEV) console.error('Falha ao restaurar sessão', error)
+      })
+      .finally(() => setLoading(false))
 
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession)
@@ -47,24 +63,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     configured: isSupabaseConfigured,
     recovering,
     signIn: async (email, password) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const { error } = await withAuthTimeout(supabase.auth.signInWithPassword({ email, password }))
       if (error) throw error
     },
     signUp: async (email, password, displayName) => {
-      const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: displayName } } })
+      const { error } = await withAuthTimeout(supabase.auth.signUp({ email, password, options: { data: { display_name: displayName } } }))
       if (error) throw error
     },
     signOut: async () => {
-      const { error } = await supabase.auth.signOut()
+      const { error } = await withAuthTimeout(supabase.auth.signOut(), 10_000)
       if (error) throw error
     },
     resetPassword: async (email) => {
       const redirectTo = `${window.location.origin}${window.location.pathname}`
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+      const { error } = await withAuthTimeout(supabase.auth.resetPasswordForEmail(email, { redirectTo }))
       if (error) throw error
     },
     updatePassword: async (password) => {
-      const { error } = await supabase.auth.updateUser({ password })
+      const { error } = await withAuthTimeout(supabase.auth.updateUser({ password }))
       if (error) throw error
       setRecovering(false)
     },

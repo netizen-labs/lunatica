@@ -1,24 +1,41 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { Logo } from './components/ui/Logo'
 import { useAuth } from './contexts/AuthContext'
+import { useProfile } from './contexts/ProfileContext'
+import { useTheme } from './contexts/ThemeContext'
 
 const AuthPage = lazy(() => import('./pages/AuthPage').then((module) => ({ default: module.AuthPage })))
 const ChatPage = lazy(() => import('./pages/ChatPage').then((module) => ({ default: module.ChatPage })))
 const GuestPage = lazy(() => import('./pages/GuestPage').then((module) => ({ default: module.GuestPage })))
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((module) => ({ default: module.OnboardingPage })))
 
 function LoadingScreen() {
-  return <div className="flex min-h-screen items-center justify-center"><div className="animate-pulse"><Logo /></div></div>
+  return <div className="app-shell flex min-h-screen items-center justify-center"><div className="animate-pulse"><Logo /></div></div>
 }
 
-function Home() {
+function PrivateArea({ conversation = false }: { conversation?: boolean }) {
   const { session } = useAuth()
-  return session ? <ChatPage /> : <GuestPage />
+  const { profile, loading } = useProfile()
+  const { setTheme } = useTheme()
+
+  useEffect(() => {
+    if (profile?.theme) setTheme(profile.theme)
+  }, [profile?.theme, setTheme])
+
+  if (!session) return conversation ? <Navigate to="/" replace /> : <GuestPage />
+  if (loading || !profile) return <LoadingScreen />
+  if (!profile.onboarding_completed) return <Navigate to="/onboarding" replace />
+  return <ChatPage />
 }
 
-function Conversation() {
+function OnboardingRoute() {
   const { session } = useAuth()
-  return session ? <ChatPage /> : <Navigate to="/" replace />
+  const { profile, loading } = useProfile()
+  if (!session) return <Navigate to="/login?mode=signup" replace />
+  if (loading || !profile) return <LoadingScreen />
+  if (profile.onboarding_completed) return <Navigate to="/" replace />
+  return <OnboardingPage />
 }
 
 function PublicAuth() {
@@ -34,8 +51,9 @@ export default function App() {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={<PublicAuth />} />
-        <Route path="/" element={recovering ? <Navigate to="/login" replace /> : <Home />} />
-        <Route path="/chat/:conversationId" element={recovering ? <Navigate to="/login" replace /> : <Conversation />} />
+        <Route path="/onboarding" element={<OnboardingRoute />} />
+        <Route path="/" element={recovering ? <Navigate to="/login" replace /> : <PrivateArea />} />
+        <Route path="/chat/:conversationId" element={recovering ? <Navigate to="/login" replace /> : <PrivateArea conversation />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

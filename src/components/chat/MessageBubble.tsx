@@ -1,13 +1,13 @@
 import { lazy, Suspense, useState } from 'react'
-import { Check, Copy, Pencil, RotateCcw, X } from 'lucide-react'
-import type { Message } from '../../types/database'
+import { Check, Copy, FileText, Image, Pencil, RotateCcw, X } from 'lucide-react'
+import type { ChatMessage, Message } from '../../types/database'
 import { copyText } from '../../lib/utils'
 import { useToast } from '../../contexts/ToastContext'
 
 const MarkdownRenderer = lazy(() => import('./MarkdownRenderer').then((module) => ({ default: module.MarkdownRenderer })))
 
 interface MessageBubbleProps {
-  message: Message
+  message: ChatMessage
   canRegenerate: boolean
   generating: boolean
   onRegenerate: (message: Message) => Promise<void>
@@ -53,7 +53,7 @@ export function MessageBubble({ message, canRegenerate, generating, onRegenerate
               <div className="mt-2 flex justify-end gap-2"><button type="button" className="icon-btn" onClick={() => setEditing(false)} aria-label="Cancelar edição"><X className="h-4 w-4" /></button><button type="button" className="btn-primary !px-3 !py-2" onClick={() => void saveEdit()} disabled={busy || !draft.trim()}><Check className="h-4 w-4" /> Salvar e enviar</button></div>
             </div>
           ) : (
-            <div className="rounded-2xl rounded-br-md bg-zinc-200/80 px-4 py-3 text-[15px] leading-6 text-zinc-900 dark:bg-white/[0.09] dark:text-zinc-100 whitespace-pre-wrap">{message.content}</div>
+            <div className="user-message-card"><div className="whitespace-pre-wrap">{message.content}</div>{message.attachments && message.attachments.length > 0 && <div className="mt-3 flex flex-wrap gap-2 border-t border-white/10 pt-3">{message.attachments.map((file) => <span key={file.id} className="attachment-chip !bg-black/10">{file.mime_type.startsWith('image/') ? <Image className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}<span className="max-w-44 truncate">{file.file_name}</span></span>)}</div>}</div>
           )}
           {!editing && <div className="mt-1.5 flex justify-end gap-0.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"><button type="button" className="icon-btn !h-8 !w-8" onClick={copy} aria-label="Copiar mensagem"><Copy className="h-3.5 w-3.5" /></button><button type="button" className="icon-btn !h-8 !w-8" onClick={() => setEditing(true)} disabled={generating} aria-label="Editar mensagem"><Pencil className="h-3.5 w-3.5" /></button></div>}
         </div>
@@ -64,7 +64,7 @@ export function MessageBubble({ message, canRegenerate, generating, onRegenerate
   return (
     <article className="group mx-auto w-full max-w-3xl px-4 sm:px-6">
       <div className="flex gap-3 sm:gap-4">
-        <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-lunar-300 dark:bg-white dark:text-violet-700" aria-label="Lunatica">
+        <div className="assistant-mark" aria-label="Lunatica">
           <span className="text-xs font-bold">L</span>
         </div>
         <div className="min-w-0 flex-1 pt-0.5">

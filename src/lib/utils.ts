@@ -24,9 +24,29 @@ export function friendlyError(error: unknown) {
   if (!navigator.onLine) return 'Você está offline. Verifique sua conexão.'
   if (error instanceof DOMException && error.name === 'AbortError') return 'Geração interrompida.'
   if (error instanceof Error) {
+    if (/invalid login credentials/i.test(error.message)) return 'Email ou senha incorretos.'
+    if (/email not confirmed/i.test(error.message)) return 'Confirme seu email antes de entrar.'
+    if (/already registered|user already exists/i.test(error.message)) return 'Já existe uma conta com esse email.'
+    if (/anexo|crédito|limite diário|no máximo 4|12 MB|5 MB/i.test(error.message)) return error.message.replace(/^\d{3}:\s*/, '')
     if (/401|jwt|session|auth/i.test(error.message)) return 'Sua sessão expirou. Entre novamente.'
     if (/429|rate limit/i.test(error.message)) return 'Muitas solicitações. Aguarde um pouco e tente novamente.'
     if (/timeout/i.test(error.message)) return 'A resposta demorou demais. Tente novamente.'
   }
   return 'Não foi possível concluir a operação. Tente novamente.'
+}
+
+const reservedUsernames = new Set([
+  'admin', 'administrator', 'root', 'system', 'suporte', 'support',
+  'moderador', 'moderator', 'lunatica', 'nitlabs', 'nitlabs_code',
+])
+
+export function normalizeUsername(value: string) {
+  return value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 24)
+}
+
+export function validateUsername(value: string) {
+  if (value.length < 3) return 'Use pelo menos 3 caracteres.'
+  if (!/^[a-z0-9_]{3,24}$/.test(value)) return 'Use apenas letras minúsculas, números e _.'
+  if (reservedUsernames.has(value)) return 'Esse nome é reservado. Escolha outro.'
+  return null
 }

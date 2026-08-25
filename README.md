@@ -1,6 +1,6 @@
 # Lunatica 1.5
 
-Lunatica é uma aplicação web de chat com inteligência artificial, construída como um MVP utilizável e seguro. **Lunatica 1.5 é o nome do modelo**, não a versão do aplicativo. A plataforma oferece uma apresentação pública, autenticação, múltiplas conversas persistentes, respostas em streaming, Markdown, edição, regeneração, temas e uma interface responsiva.
+Lunatica é uma aplicação web de chat com inteligência artificial, construída como um produto utilizável e seguro. **Lunatica 1.5 é o nome do modelo**, não a versão do aplicativo. A plataforma oferece apresentação pública, autenticação, onboarding, perfil com avatar privado, instruções pessoais, múltiplas conversas persistentes, respostas em streaming, Markdown, edição, regeneração, anexos, cotas de uso e uma interface responsiva.
 
 O frontend nunca recebe a chave do Gemini. O navegador autentica o usuário no Supabase e chama uma Edge Function; somente essa função acessa a Gemini API.
 
@@ -17,7 +17,7 @@ O frontend nunca recebe a chave do Gemini. O navegador autentica o usuário no S
 ## Instalação
 
 ```bash
-git clone https://github.com/SEU_USUARIO/lunatica.git
+git clone https://github.com/nitlabs-code/lunatica.git
 cd lunatica
 npm install
 cp .env.example .env
@@ -55,13 +55,13 @@ npx supabase link --project-ref SEU_PROJECT_REF
 npx supabase db push
 ```
 
-A migration cria `profiles`, `conversations`, `messages` e `rate_limits`, além de índices, constraints, triggers, grants e políticas RLS. O perfil é criado automaticamente após o cadastro.
+As migrations criam `profiles`, `conversations`, `messages`, `message_attachments`, `usage_events` e `rate_limits`, além dos buckets privados `avatars` e `attachments`, índices, constraints, triggers, grants e políticas RLS. O perfil é criado automaticamente após o cadastro.
 
 5. Em **Authentication > URL Configuration**, defina a URL do site e adicione as URLs de redirecionamento de desenvolvimento e produção, por exemplo:
 
 ```text
 http://localhost:5173
-https://SEU_USUARIO.github.io/lunatica/
+https://nitlabs-code.github.io/lunatica/
 ```
 
 6. Para exigir confirmação de email, mantenha **Confirm email** ativado. Para testes locais rápidos, ela pode ser desativada no painel.
@@ -78,7 +78,17 @@ npx supabase secrets set GEMINI_MODEL=gemini-3.7-flash
 npx supabase functions deploy chat
 ```
 
-`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` são fornecidos automaticamente pelo ambiente de Edge Functions do Supabase. A função valida o JWT, confirma a posse da conversa por RLS, aplica rate limit no servidor, busca apenas as 40 mensagens mais recentes e encaminha o stream SSE do Gemini.
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` são fornecidos automaticamente pelo ambiente de Edge Functions do Supabase. A função valida o JWT, confirma a posse da conversa por RLS, aplica rate limit e a cota diária no servidor, lê as instruções pessoais do perfil, baixa somente os anexos autorizados e encaminha o stream SSE do Gemini.
+
+## Perfil, anexos e limites
+
+- O onboarding solicita nome, username filtrado, avatar opcional, tema e instruções pessoais.
+- Avatares e anexos ficam em buckets privados e só são acessíveis pelo dono via RLS.
+- Cada mensagem custa 1 crédito; cada anexo acrescenta 1 crédito.
+- O limite inicial é de 30 créditos por dia e pode ser ajustado em `supabase/functions/chat/index.ts`.
+- Cada mensagem aceita até 4 anexos, com 5 MB por arquivo e 12 MB no total.
+- Formatos aceitos: JPEG, PNG, WebP, GIF, PDF, TXT, Markdown, CSV e JSON.
+- As instruções pessoais complementam o system prompt fixo e nunca o substituem.
 
 Para desenvolvimento local da função, crie `supabase/.env.local` (ignorado pelo Git) com `GEMINI_API_KEY` e execute:
 
@@ -115,7 +125,7 @@ npm run preview
 3. Em **Settings > Pages**, escolha **GitHub Actions** como source.
 4. Faça push para `main`. O workflow valida, compila e publica `dist`.
 
-A aplicação usa `HashRouter`, portanto URLs como `/#/chat/ID` continuam funcionando após atualizar a página no GitHub Pages.
+A aplicação é publicada em [nitlabs-code.github.io/lunatica](https://nitlabs-code.github.io/lunatica/) e usa `HashRouter`, portanto URLs como `/#/chat/ID` continuam funcionando após atualizar a página no GitHub Pages.
 
 ## Deploy alternativo no Vercel
 
@@ -125,9 +135,10 @@ O arquivo `vercel.json` já configura o build estático. Importe o repositório 
 
 - Nenhuma chave Gemini ou service role é incluída no frontend.
 - RLS e grants limitam cada usuário aos próprios dados.
+- Buckets de avatar e anexos são privados e usam políticas por pasta do usuário.
 - A Edge Function valida o token no servidor e não aceita histórico arbitrário do cliente.
 - Mensagens pertencem à mesma combinação `conversation_id + user_id` por constraint de banco.
-- Rate limit básico é aplicado no backend.
+- Rate limit por minuto e cota diária são aplicados no backend.
 - Respostas são renderizadas por `react-markdown`, sem HTML bruto.
 
 Antes de produção, ajuste limites de uso ao seu plano e configure monitoramento de erros sem registrar conteúdo sensível ou secrets.
