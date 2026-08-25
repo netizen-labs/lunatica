@@ -41,6 +41,12 @@ export interface Database {
         Update: never
         Relationships: []
       }
+      memories: {
+        Row: { id: string; user_id: string; source_message_id: string | null; summary: string; category: 'identity' | 'education' | 'work' | 'preference' | 'personal' | 'custom'; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; source_message_id?: string | null; summary: string; category?: 'identity' | 'education' | 'work' | 'preference' | 'personal' | 'custom'; created_at?: string; updated_at?: string }
+        Update: never
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -53,4 +59,5 @@ export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Conversation = Database['public']['Tables']['conversations']['Row']
 export type Message = Database['public']['Tables']['messages']['Row']
 export type MessageAttachment = Database['public']['Tables']['message_attachments']['Row']
+export type Memory = Database['public']['Tables']['memories']['Row']
 export type ChatMessage = Message & { attachments?: MessageAttachment[] }

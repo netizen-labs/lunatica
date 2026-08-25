@@ -1,4 +1,5 @@
 import type { MessageRole } from './database'
+import type { Memory } from './database'
 
 export interface ChatMessageInput {
   role: MessageRole
@@ -18,6 +19,10 @@ export interface UsageStatus {
   used: number
   remaining: number
   resetsAt: string
+}
+
+export interface MemoryResponse {
+  created: Memory[]
 }
 
 export interface ApiErrorBody {

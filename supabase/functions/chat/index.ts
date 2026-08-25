@@ -135,9 +135,11 @@ Deno.serve(async (request) => {
 
     const { data: profile, error: profileError } = await admin.from('profiles').select('custom_instructions').eq('id', user.id).single()
     if (profileError) throw profileError
+    const { data: memoryRows, error: memoryError } = await userClient.from('memories').select('summary').order('updated_at', { ascending: false }).limit(20)
+    if (memoryError) throw memoryError
     const files = await downloadAttachments(admin, attachments)
     const messages = [...history].reverse().map(({ role, content }) => ({ role, content })) as HistoryMessage[]
-    const stream = await streamResponse(messages, request.signal, { customInstructions: profile.custom_instructions, attachments: files })
+    const stream = await streamResponse(messages, request.signal, { customInstructions: profile.custom_instructions, attachments: files, memories: (memoryRows ?? []).map((row) => row.summary) })
     const { error: usageError } = await admin.from('usage_events').insert({ user_id: user.id, cost, attachment_count: attachments.length })
     if (usageError) throw usageError
     return new Response(stream, {

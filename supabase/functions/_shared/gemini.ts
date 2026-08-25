@@ -24,6 +24,7 @@ export interface GeminiAttachment {
 interface StreamResponseOptions {
   customInstructions?: string
   attachments?: GeminiAttachment[]
+  memories?: string[]
 }
 
 export function convertMessagesToGeminiFormat(messages: HistoryMessage[]): GeminiContent[] {
@@ -35,16 +36,21 @@ export function convertMessagesToGeminiFormat(messages: HistoryMessage[]): Gemin
     }))
 }
 
-function buildSystemInstruction(customInstructions?: string) {
+function buildSystemInstruction(customInstructions?: string, memories: string[] = []) {
   const clean = customInstructions?.trim().slice(0, 2000)
-  if (!clean) return LUNATICA_SYSTEM_PROMPT
-  return `${LUNATICA_SYSTEM_PROMPT}\n\nINSTRUÇÕES PESSOAIS DO USUÁRIO:\n${clean}\n\nSiga essas preferências somente quando não entrarem em conflito com o prompt de sistema, segurança, fatos ou com o pedido atual.`
+  const sections = [LUNATICA_SYSTEM_PROMPT]
+  if (clean) sections.push(`INSTRUÇÕES PESSOAIS DO USUÁRIO:\n${clean}\n\nSiga essas preferências somente quando não entrarem em conflito com o prompt de sistema, segurança, fatos ou com o pedido atual.`)
+  if (memories.length) sections.push(`MEMÓRIAS CONFIRMADAS PELO USUÁRIO:\n${memories.slice(0, 20).map((memory) => `- ${memory}`).join('\n')}\n\nUse essas memórias apenas quando forem relevantes. Não as revele sem necessidade nem trate inferências como fatos.`)
+  return sections.join('\n\n')
 }
 
 function addAttachments(contents: GeminiContent[], attachments: GeminiAttachment[]) {
   if (!attachments.length || !contents.length) return contents
   const next = contents.map((content) => ({ ...content, parts: [...content.parts] }))
-  const lastUserIndex = next.findLastIndex((content) => content.role === 'user')
+  let lastUserIndex = -1
+  for (let index = next.length - 1; index >= 0; index -= 1) {
+    if (next[index].role === 'user') { lastUserIndex = index; break }
+  }
   if (lastUserIndex < 0) return next
   const parts = next[lastUserIndex].parts
   for (const attachment of attachments) {
@@ -78,7 +84,7 @@ export async function streamResponse(messages: HistoryMessage[], signal: AbortSi
         'x-goog-api-key': apiKey,
       },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: buildSystemInstruction(options.customInstructions) }] },
+        system_instruction: { parts: [{ text: buildSystemInstruction(options.customInstructions, options.memories) }] },
         contents: addAttachments(convertMessagesToGeminiFormat(messages), options.attachments ?? []),
         generationConfig: {
           maxOutputTokens: 3072,

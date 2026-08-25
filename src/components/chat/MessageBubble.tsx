@@ -3,6 +3,7 @@ import { Check, Copy, FileText, Image, Pencil, RotateCcw, X } from 'lucide-react
 import type { ChatMessage, Message } from '../../types/database'
 import { copyText } from '../../lib/utils'
 import { useToast } from '../../contexts/ToastContext'
+import { LogoMark } from '../ui/Logo'
 
 const MarkdownRenderer = lazy(() => import('./MarkdownRenderer').then((module) => ({ default: module.MarkdownRenderer })))
 
@@ -64,9 +65,7 @@ export function MessageBubble({ message, canRegenerate, generating, onRegenerate
   return (
     <article className="group mx-auto w-full max-w-3xl px-4 sm:px-6">
       <div className="flex gap-3 sm:gap-4">
-        <div className="assistant-mark" aria-label="Lunatica">
-          <span className="text-xs font-bold">L</span>
-        </div>
+        <LogoMark className="assistant-mark" />
         <div className="min-w-0 flex-1 pt-0.5">
           {message.content ? <Suspense fallback={<div className="h-16 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-white/[0.04]" />}><MarkdownRenderer content={message.content} /></Suspense> : <div className="flex h-7 items-center gap-1" aria-label="Lunatica está pensando"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lunar-400" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lunar-400 [animation-delay:120ms]" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lunar-400 [animation-delay:240ms]" /></div>}
           {message.content && <div className="mt-2 flex gap-0.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"><button type="button" className="icon-btn !h-8 !w-8" onClick={copy} aria-label="Copiar resposta"><Copy className="h-3.5 w-3.5" /></button>{canRegenerate && <button type="button" className="icon-btn !h-8 !w-8" onClick={() => void onRegenerate(message)} disabled={generating} aria-label="Regenerar resposta"><RotateCcw className="h-3.5 w-3.5" /></button>}</div>}

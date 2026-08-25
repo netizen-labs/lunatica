@@ -1,6 +1,6 @@
 # Lunatica 1.5
 
-Lunatica é uma aplicação web de chat com inteligência artificial, construída como um produto utilizável e seguro. **Lunatica 1.5 é o nome do modelo**, não a versão do aplicativo. A plataforma oferece apresentação pública, autenticação, onboarding, perfil com avatar privado, instruções pessoais, múltiplas conversas persistentes, respostas em streaming, Markdown, edição, regeneração, anexos, cotas de uso e uma interface responsiva.
+Lunatica é uma aplicação web de chat com inteligência artificial, construída como um produto utilizável e seguro. **Lunatica 1.5 é o nome do modelo**, não a versão do aplicativo. A plataforma oferece apresentação pública, autenticação, onboarding, perfil com avatar privado, instruções pessoais, memórias controladas pelo usuário, múltiplas conversas persistentes, respostas em streaming, Markdown, edição, regeneração, anexos, cotas de uso e uma interface responsiva.
 
 O frontend nunca recebe a chave do Gemini. O navegador autentica o usuário no Supabase e chama uma Edge Function; somente essa função acessa a Gemini API.
 
@@ -55,7 +55,7 @@ npx supabase link --project-ref SEU_PROJECT_REF
 npx supabase db push
 ```
 
-As migrations criam `profiles`, `conversations`, `messages`, `message_attachments`, `usage_events` e `rate_limits`, além dos buckets privados `avatars` e `attachments`, índices, constraints, triggers, grants e políticas RLS. O perfil é criado automaticamente após o cadastro.
+As migrations criam `profiles`, `conversations`, `messages`, `message_attachments`, `memories`, `usage_events` e `rate_limits`, além dos buckets privados `avatars` e `attachments`, índices, constraints, triggers, grants e políticas RLS. O perfil é criado automaticamente após o cadastro. Memórias só podem ser lidas e excluídas pelo próprio usuário; a criação passa pela Edge Function autenticada.
 
 5. Em **Authentication > URL Configuration**, defina a URL do site e adicione as URLs de redirecionamento de desenvolvimento e produção, por exemplo:
 
@@ -76,9 +76,10 @@ Cadastre os secrets diretamente no Supabase:
 npx supabase secrets set GEMINI_API_KEY=SUA_CHAVE
 npx supabase secrets set GEMINI_MODEL=gemini-3.7-flash
 npx supabase functions deploy chat
+npx supabase functions deploy memory
 ```
 
-`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` são fornecidos automaticamente pelo ambiente de Edge Functions do Supabase. A função valida o JWT, confirma a posse da conversa por RLS, aplica rate limit e a cota diária no servidor, lê as instruções pessoais do perfil, baixa somente os anexos autorizados e encaminha o stream SSE do Gemini.
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` são fornecidos automaticamente pelo ambiente de Edge Functions do Supabase. As funções validam o JWT e respeitam RLS. `chat` aplica rate limit e cota diária, lê instruções e memórias confirmadas, baixa somente anexos autorizados e encaminha o stream SSE do Gemini. `memory` identifica fatos pessoais estáveis ou resume uma memória adicionada manualmente sem aceitar dados sensíveis.
 
 ## Perfil, anexos e limites
 
@@ -87,6 +88,8 @@ npx supabase functions deploy chat
 - Cada mensagem custa 1 crédito; cada anexo acrescenta 1 crédito.
 - O limite inicial é de 30 créditos por dia e pode ser ajustado em `supabase/functions/chat/index.ts`.
 - Cada mensagem aceita até 4 anexos, com 5 MB por arquivo e 12 MB no total.
+- Nome, estudos, trabalho e preferências duradouras podem virar memórias; um aviso **Memória salva** abre o painel onde o usuário revisa ou exclui cada item.
+- O painel de memórias também aceita texto manual, resumido pelo Gemini, com limite de 50 itens por usuário.
 - Formatos aceitos: JPEG, PNG, WebP, GIF, PDF, TXT, Markdown, CSV e JSON.
 - As instruções pessoais complementam o system prompt fixo e nunca o substituem.
 
@@ -95,6 +98,7 @@ Para desenvolvimento local da função, crie `supabase/.env.local` (ignorado pel
 ```bash
 npx supabase start
 npx supabase functions serve chat --env-file supabase/.env.local
+npx supabase functions serve memory --env-file supabase/.env.local
 ```
 
 O Supabase local requer Docker.

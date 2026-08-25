@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
-import type { ApiErrorBody, ChatRequest, UsageStatus } from '../types/chat'
+import type { ApiErrorBody, ChatRequest, MemoryResponse, UsageStatus } from '../types/chat'
 import { supabaseProjectUrl, supabasePublicKey } from './supabase'
 
 interface StreamChatOptions {
@@ -83,4 +83,23 @@ export async function getUsageStatus(session: Session, signal?: AbortSignal): Pr
     throw new Error(`${response.status}: ${body.error || 'Falha ao consultar o limite diário'}`)
   }
   return response.json() as Promise<UsageStatus>
+}
+
+export async function requestMemory(session: Session, payload: { action: 'analyze'; messageId: string } | { action: 'add'; content: string }, signal?: AbortSignal): Promise<MemoryResponse> {
+  if (!supabaseProjectUrl) throw new Error('Supabase não configurado')
+  const response = await fetch(`${supabaseProjectUrl}/functions/v1/memory`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: supabasePublicKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new Error(`${response.status}: ${body.error || 'Não foi possível salvar a memória'}`)
+  }
+  return response.json() as Promise<MemoryResponse>
 }

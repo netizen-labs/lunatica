@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Coins, Lightbulb, Orbit, PenLine, Search, Sparkles, WifiOff } from 'lucide-react'
+import { Brain, Coins, Lightbulb, Orbit, PenLine, Search, Sparkles, WifiOff } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MessageBubble } from '../components/chat/MessageBubble'
 import { MessageComposer } from '../components/chat/MessageComposer'
+import { MemoryDialog } from '../components/memory/MemoryDialog'
+import { ProfileDialog } from '../components/profile/ProfileDialog'
 import { MobileMenuButton, Sidebar } from '../components/sidebar/Sidebar'
 import { SettingsDialog } from '../components/settings/SettingsDialog'
 import { useAuth } from '../contexts/AuthContext'
 import { useProfile } from '../contexts/ProfileContext'
 import { useToast } from '../contexts/ToastContext'
 import { useChat } from '../hooks/useChat'
+import { useMemories } from '../hooks/useMemories'
 import { friendlyError } from '../lib/utils'
 
 const suggestions = [
@@ -26,11 +29,14 @@ export function ChatPage() {
   const { conversationId } = useParams()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [memoryOpen, setMemoryOpen] = useState(false)
   const [online, setOnline] = useState(navigator.onLine)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   if (!user || !session) throw new Error('ChatPage requer uma sessão autenticada')
-  const chat = useChat({ user, session, onNotify: showToast })
+  const memory = useMemories(session)
+  const chat = useChat({ user, session, onNotify: showToast, onAnalyzeMemory: memory.analyzeMessage })
   const openConversation = chat.openConversation
 
   useEffect(() => { void openConversation(conversationId ?? null) }, [conversationId, openConversation])
@@ -80,6 +86,7 @@ export function ChatPage() {
         onSelect={selectConversation}
         onRename={chat.renameConversation}
         onDelete={removeConversation}
+        onProfile={() => setProfileOpen(true)}
         onSettings={() => setSettingsOpen(true)}
         onLogout={signOut}
       />
@@ -88,18 +95,21 @@ export function ChatPage() {
         <header className="mission-header">
           <MobileMenuButton onClick={() => setMobileOpen(true)} />
           <div className="min-w-0 flex-1"><span className="micro-label hidden sm:block">SESSÃO ATIVA</span><h1 className="truncate text-sm font-medium text-zinc-200">{activeConversation?.title || 'Nova conversa'}</h1></div>
+          <button type="button" className="status-pill flex" onClick={() => { memory.clearNotice(); setMemoryOpen(true) }} aria-label={`Abrir memórias, ${memory.memories.length} salvas`}><Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">Memórias</span>{memory.memories.length > 0 && <strong className="text-lunar-300">{memory.memories.length}</strong>}</button>
           {chat.usage && <span className="status-pill hidden sm:flex"><Coins className="h-3.5 w-3.5" /> {chat.usage.remaining} créditos</span>}
           {!online && <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-300"><WifiOff className="h-3.5 w-3.5" /> Offline</span>}
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        {memory.notice && <button type="button" className="memory-saved-banner" onClick={() => { memory.clearNotice(); setMemoryOpen(true) }}><span className="memory-pulse"><Brain className="h-3.5 w-3.5" /></span><span><strong>{memory.notice}</strong><small>Toque para ver o que a Lunatica aprendeu</small></span></button>}
+
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           {chat.loadingMessages ? (
             <div className="mx-auto max-w-3xl space-y-8 px-6 py-10">{Array.from({ length: 3 }).map((_, index) => <div key={index} className={`h-20 animate-pulse rounded-2xl bg-zinc-200/70 dark:bg-white/[0.04] ${index % 2 === 0 ? 'ml-auto w-2/3' : 'w-full'}`} />)}</div>
           ) : chat.messages.length === 0 ? (
-            <section className="relative mx-auto flex min-h-full max-w-4xl flex-col justify-center px-5 py-12">
-              <div className="absolute right-4 top-12 hidden h-44 w-44 rounded-full border border-lunar-400/10 sm:block" aria-hidden="true"><span className="absolute left-7 top-9 h-1.5 w-1.5 rounded-full bg-lunar-300" /></div>
-              <div className="relative max-w-2xl"><span className="micro-label flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> CANAL LUNATICA 1.5</span><h2 className="mt-4 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">O que vamos<br /><span className="text-lunar-300">desvendar hoje?</span></h2><p className="mt-5 max-w-lg text-sm leading-6 text-[var(--muted)]">Programação sênior, textos bem formados, análises ou uma ideia completamente fora da órbita.</p></div>
-              <div className="relative mt-10 grid w-full grid-cols-1 gap-2 sm:grid-cols-2">{suggestions.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" onClick={() => void send(prompt)} className="suggestion-card"><span className="text-[10px] text-zinc-600">0{index + 1}</span><Icon className="h-4 w-4 text-lunar-300" /><span>{label}</span></button>)}</div>
+            <section className="relative mx-auto flex min-h-full w-full max-w-5xl flex-col items-center justify-center px-5 py-12 text-center">
+              <div className="empty-orbit" aria-hidden="true"><span /></div>
+              <div className="relative"><span className="micro-label inline-flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> LUNATICA 1.5</span><h2 className="mt-5 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">Como posso ajudar?</h2><p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[var(--muted)]">Escolha um ponto de partida ou envie sua própria ideia. A órbita começa por você.</p></div>
+              <div className="relative mt-10 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">{suggestions.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" onClick={() => void send(prompt)} className="suggestion-square"><span className="text-[9px] tracking-[.16em] text-zinc-600">0{index + 1}</span><Icon className="h-5 w-5 text-lunar-300" /><strong>{label}</strong></button>)}</div>
             </section>
           ) : (
             <div className="space-y-8 py-8 sm:space-y-10 sm:py-10">
@@ -114,7 +124,9 @@ export function ChatPage() {
         </div>
       </main>
 
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} onClearHistory={async () => { await chat.clearHistory(); navigate('/') }} />
+      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <SettingsDialog open={settingsOpen} remainingCredits={chat.usage?.remaining} onClose={() => setSettingsOpen(false)} onClearHistory={async () => { await chat.clearHistory(); navigate('/') }} />
+      <MemoryDialog open={memoryOpen} memories={memory.memories} loading={memory.loading} onClose={() => { memory.clearNotice(); setMemoryOpen(false) }} onAdd={memory.addMemory} onDelete={memory.deleteMemory} />
     </div>
   )
 }

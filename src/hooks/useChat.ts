@@ -10,18 +10,20 @@ interface UseChatOptions {
   user: User
   session: Session
   onNotify: (message: string, kind?: 'success' | 'error' | 'info') => void
+  onAnalyzeMemory?: (messageId: string) => Promise<void>
 }
 
 const MAX_ATTACHMENTS = 4
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
 const MAX_TOTAL_SIZE = 12 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'])
+const MEMORY_SIGNAL = /\b(meu nome|me chamo|pode me chamar|eu estudo|estudo (?:na|no|em)|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|designer|estudante)|eu trabalho|trabalho (?:na|no|com|como)|eu prefiro|gosto de|moro em|minha profissão)\b/i
 
 function safeFileName(name: string) {
   return name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'anexo'
 }
 
-export function useChat({ user, session, onNotify }: UseChatOptions) {
+export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOptions) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [usage, setUsage] = useState<UsageStatus | null>(null)
@@ -183,6 +185,7 @@ export function useChat({ user, session, onNotify }: UseChatOptions) {
       if (error) throw error
       const attachments = files.length ? await uploadFiles(conversationId, userMessage.id, files) : []
       setMessages((current) => [...current, { ...userMessage, attachments }])
+      if (MEMORY_SIGNAL.test(content)) void onAnalyzeMemory?.(userMessage.id)
       await generate(conversationId)
       return conversationId
     } catch (error) {
@@ -191,7 +194,7 @@ export function useChat({ user, session, onNotify }: UseChatOptions) {
       if (import.meta.env.DEV) console.error(error)
       return conversationId
     }
-  }, [activeId, generate, generating, onNotify, uploadFiles, usage, user.id])
+  }, [activeId, generate, generating, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
 
   const removeStoredAttachments = useCallback(async (query: 'conversation' | 'messages' | 'all', value?: string | string[]) => {
     let request = supabase.from('message_attachments').select('storage_path')
@@ -256,8 +259,9 @@ export function useChat({ user, session, onNotify }: UseChatOptions) {
     const { error: deleteError } = await supabase.from('messages').delete().eq('conversation_id', message.conversation_id).gt('created_at', message.created_at)
     if (deleteError) throw deleteError
     setMessages((current) => current.filter((item) => item.created_at <= message.created_at).map((item) => item.id === message.id ? { ...item, content } : item))
+    if (MEMORY_SIGNAL.test(content)) void onAnalyzeMemory?.(message.id)
     await generate(message.conversation_id)
-  }, [generate, generating, removeStoredAttachments])
+  }, [generate, generating, onAnalyzeMemory, removeStoredAttachments])
 
   return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, renameConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage }
 }
