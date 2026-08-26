@@ -92,7 +92,7 @@ export async function streamChatResponse({ conversationId, session, signal, onTe
   }
 
   if (groundingSources.size) {
-    const sources = [...groundingSources.entries()].slice(0, 8).map(([uri, title]) => `- [${title.replace(/[\[\]]/g, '')}](${uri})`).join('\n')
+    const sources = [...groundingSources.entries()].slice(0, 8).map(([uri, title]) => `- [${title.replace(/[[\]]/g, '')}](${uri})`).join('\n')
     onText(`\n\n### Fontes\n${sources}`)
   }
 }
