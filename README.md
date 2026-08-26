@@ -1,166 +1,148 @@
-# Lunatica 1.5
+# 🌙 Lunatica
 
-Lunatica é uma aplicação web de chat com inteligência artificial, construída como um produto utilizável e seguro. **Lunatica 1.5 é o nome do modelo**, não a versão do aplicativo. A plataforma oferece apresentação pública, autenticação, onboarding, perfil com avatar privado, instruções pessoais, memórias controladas pelo usuário, múltiplas conversas persistentes, respostas em streaming, Markdown, edição, regeneração, anexos, cotas de uso e uma interface responsiva.
+# Inteligência artificial feita para brasileiros. 🇧🇷
 
-O frontend nunca recebe a chave do Gemini. O navegador autentica o usuário no Supabase e chama uma Edge Function; somente essa função acessa a Gemini API.
+A Lunatica é uma plataforma brasileira de inteligência artificial criada para tornar IA avançada mais acessível, útil e natural no dia a dia.
 
-## Stack
+Feita com foco no público brasileiro, a Lunatica oferece uma experiência em português para conversar, estudar, programar, escrever, pesquisar, analisar arquivos, desenvolver ideias e trabalhar em projetos.
 
-- React 19 + TypeScript
-- Vite 8
-- Tailwind CSS 3
-- Lucide React
-- Supabase Auth, Postgres, RLS e Edge Functions
-- Google Gemini API (`streamGenerateContent` com SSE)
-- GitHub Pages e GitHub Actions
+A proposta é simples: criar uma IA moderna que não pareça apenas mais um chatbot genérico traduzido para português.
 
-## Instalação
+🇧🇷 Feita para brasileiros
 
-```bash
-git clone https://github.com/nitlabs-code/lunatica.git
-cd lunatica
-npm install
-cp .env.example .env
-```
+A Lunatica nasceu no Brasil e foi desenvolvida pensando primeiro em usuários brasileiros.
 
-No Windows PowerShell, use `Copy-Item .env.example .env`.
+Isso significa uma experiência construída ao redor do português, do contexto brasileiro e da forma como as pessoas realmente utilizam inteligência artificial por aqui.
 
-## Ambiente do frontend
+Seja para estudar uma matéria, entender um assunto complicado, resolver um problema de código ou simplesmente desenvolver uma ideia, a Lunatica foi criada para ser uma ferramenta que você realmente possa usar no cotidiano.
 
-Preencha somente valores públicos em `.env`:
+🧠 O que a Lunatica pode fazer?
 
-```env
-VITE_SUPABASE_URL=https://SEU_PROJETO.supabase.co
-VITE_SUPABASE_ANON_KEY=SUA_CHAVE_PUBLICA
-```
+A Lunatica pode ajudar com diversas tarefas, incluindo:
 
-A chave `anon`/publishable é adequada no navegador porque o acesso aos dados é protegido por RLS. Nunca adicione `VITE_GEMINI_API_KEY`, `VITE_SUPABASE_SERVICE_ROLE_KEY` ou qualquer segredo com prefixo `VITE_`.
+- 📚 Estudos e explicações
+- 💻 Programação e desenvolvimento
+- ✍️ Escrita e revisão de textos
+- 🧠 Brainstorming
+- 🔎 Pesquisa e descoberta de informações
+- 📄 Análise de documentos e arquivos
+- 🚀 Desenvolvimento de projetos
+- 💬 Conversas e perguntas gerais
+- 📝 Resumos e organização de informações
+- 🌎 Conteúdo em diferentes idiomas
 
-`VITE_BASE_PATH` é opcional. Em produção, o padrão local é `/lunatica/`; o workflow define automaticamente o nome do repositório.
+✨ Recursos
 
-## Configuração do Supabase
+A plataforma conta com:
 
-1. Crie um projeto no [Supabase](https://supabase.com/dashboard).
-2. Instale o [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) ou use `npx supabase`.
-3. Autentique e associe o projeto:
+- Respostas em tempo real
+- Histórico de conversas
+- Múltiplos chats
+- Upload e análise de arquivos
+- Markdown
+- Edição de mensagens
+- Regeneração de respostas
+- Perfil personalizado
+- Avatar
+- Instruções pessoais
+- Sistema de memória
+- Interface responsiva para computador e celular
+- Temas personalizados
+- Autenticação de usuários
+- Plano gratuito
+- LunaMax
 
-```bash
-npx supabase login
-npx supabase link --project-ref SEU_PROJECT_REF
-```
+🧠 Memória
 
-4. Aplique a migration versionada:
+A Lunatica possui um sistema de memória que permite tornar as conversas mais contextualizadas.
 
-```bash
-npx supabase db push
-```
+Informações úteis, como preferências, projetos e objetivos, podem ser utilizadas para melhorar futuras conversas.
 
-As migrations criam `profiles`, `conversations`, `messages`, `message_attachments`, `memories`, `usage_events`, `rate_limits`, `user_plans` e o inventário protegido de chaves LunaMax, além dos buckets privados `avatars` e `attachments`, índices, constraints, triggers, grants e políticas RLS. O perfil é criado automaticamente após o cadastro. Memórias só podem ser lidas e excluídas pelo próprio usuário; a criação passa pela Edge Function autenticada.
+O usuário mantém controle sobre suas memórias e pode visualizá-las ou removê-las pelas configurações.
 
-5. Em **Authentication > URL Configuration**, defina a URL do site e adicione as URLs de redirecionamento de desenvolvimento e produção, por exemplo:
+🌙 Lunatica 1.5
 
-```text
-http://localhost:5173
-https://nitlabs-code.github.io/lunatica/
-```
+Lunatica 1.5 é o nome da atual experiência de inteligência artificial da Lunatica.
 
-6. Mantenha **Confirm email** ativado. O cadastro mostra uma etapa de verificação com reenvio; contas sem `email_confirmed_at` não ficam aptas a pagamentos futuros.
+Ela combina os sistemas desenvolvidos para a plataforma com modelos de IA utilizados para interpretar solicitações, compreender contexto, trabalhar com arquivos e gerar respostas.
 
-## Gemini e Edge Function
+A Lunatica 1.5 foi criada para oferecer respostas rápidas e úteis sem transformar a interface em um painel de avião comercial.
 
-Crie uma chave no [Google AI Studio](https://aistudio.google.com/app/apikey). Não coloque a chave em `.env` do frontend nem a compartilhe no chat.
+🌙 LunaMax
 
-Cadastre os secrets diretamente no Supabase:
+Para quem utiliza a Lunatica com maior frequência, existe o LunaMax.
 
-```bash
-npx supabase secrets set GEMINI_API_KEY=SUA_CHAVE
-npx supabase secrets set GEMINI_MODEL=gemini-2.5-flash
-npx supabase functions deploy chat
-npx supabase functions deploy memory
-npx supabase functions deploy redeem-plan
-```
+O plano aumenta os limites disponíveis e permite utilizar a plataforma de maneira mais intensa.
 
-`SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` são fornecidos automaticamente pelo ambiente de Edge Functions do Supabase. As funções validam o JWT e respeitam RLS. `chat` aplica rate limit e cotas, lê instruções e memórias confirmadas, baixa somente anexos autorizados e encaminha o stream SSE do Gemini. Para LunaMax, aumenta a capacidade de resposta e disponibiliza Google Search Grounding quando o modelo julgar necessário. `memory` identifica fatos pessoais estáveis, projetos ou objetivos e também resume uma memória adicionada manualmente. `redeem-plan` valida e-mail confirmado, aceite do aviso e o hash de uma chave sem revelar o inventário ao navegador.
+Gratuito
 
-## Perfil, anexos e limites
+- 30 créditos por dia
+- Até 12 mensagens por conversa
+- Upload de arquivos
+- Sistema de memória
+- Histórico de conversas
 
-- O onboarding solicita nome, username filtrado, avatar opcional, tema e instruções pessoais.
-- Avatares e anexos ficam em buckets privados e só são acessíveis pelo dono via RLS.
-- Cada mensagem custa 1 crédito; cada anexo acrescenta 1 crédito.
-- O plano gratuito oferece 30 créditos por dia, até 12 mensagens e 3 anexos por conversa.
-- LunaMax oferece 300 créditos por dia, até 60 mensagens e 30 anexos por conversa durante o período ativo.
-- Cada mensagem aceita até 3 anexos, com 5 MB por arquivo e 12 MB no total.
-- Nome, estudos, trabalho, preferências duradouras, projetos e objetivos podem virar memórias; um aviso **Memória salva** abre diretamente a aba de memória nas configurações.
-- O painel de memórias também aceita texto manual, resumido pelo Gemini, com limite de 50 itens por usuário.
-- Formatos aceitos: JPEG, PNG, WebP, GIF, PDF, TXT, Markdown, CSV e JSON.
-- As instruções pessoais complementam o system prompt fixo e nunca o substituem.
+LunaMax
 
-Para desenvolvimento local da função, crie `supabase/.env.local` (ignorado pelo Git) com `GEMINI_API_KEY` e execute:
+R$ 12,99 por 30 dias
 
-```bash
-npx supabase start
-npx supabase functions serve chat --env-file supabase/.env.local
-npx supabase functions serve memory --env-file supabase/.env.local
-npx supabase functions serve redeem-plan --env-file supabase/.env.local
-```
+- 300 créditos por dia
+- Até 60 mensagens por conversa
+- Até 30 anexos por conversa
+- Maior capacidade de utilização
+- Recursos adicionais de pesquisa quando disponíveis
+- Sem renovação automática
 
-O Supabase local requer Docker.
+📎 Arquivos
 
-## LunaMax e chaves manuais
+A Lunatica consegue trabalhar com diferentes tipos de conteúdo.
 
-LunaMax custa **R$ 12,99 por uma ativação de 30 dias** e não possui renovação automática. O contato é feito manualmente por WhatsApp, e-mail ou Instagram; nenhum dado de cartão é coletado pela aplicação.
+Entre os formatos suportados estão:
 
-Depois de confirmar o pagamento fora da plataforma, gere uma chave criptograficamente aleatória:
+- Imagens
+- PDF
+- TXT
+- Markdown
+- CSV
+- JSON
 
-```bash
-npm run lunamax:code
-```
+Isso permite utilizar a IA para analisar documentos, interpretar informações, estudar conteúdos e trabalhar com dados diretamente dentro de uma conversa.
 
-O comando exibe a chave de 16 caracteres para entregar ao usuário e um `INSERT` contendo apenas o SHA-256. Execute esse `INSERT` no SQL Editor do Supabase. A chave bruta não deve ser salva no repositório, em logs ou em tabelas.
+🔐 Privacidade e segurança
 
-Uma chave concede 30 dias por padrão, aceita um resgate e só pode ser ativada por uma conta com e-mail confirmado e aceite explícito do aviso sobre erros da IA. A validação é transacional no Postgres, evitando dois resgates simultâneos. Para outra duração, altere `duration_days` no SQL gerado antes de executá-lo.
+A Lunatica foi projetada para manter informações sensíveis protegidas.
 
-## Desenvolvimento
+Credenciais privadas utilizadas pela infraestrutura não são disponibilizadas diretamente ao navegador, e diferentes mecanismos de controle de acesso são utilizados para proteger contas, conversas, arquivos e outros dados privados.
 
-```bash
-npm run dev
-```
+Avatares e anexos também são armazenados de forma privada e possuem controles de acesso vinculados ao usuário.
 
-Acesse `http://localhost:5173`.
+🛠️ Tecnologia
 
-## Qualidade e build
+A Lunatica utiliza tecnologias modernas de desenvolvimento web e inteligência artificial, incluindo:
 
-```bash
-npm run typecheck
-npm run lint
-npm run build
-npm run preview
-```
+React • TypeScript • Supabase • PostgreSQL • Google Gemini • GitHub
 
-## Deploy no GitHub Pages
+A infraestrutura foi construída separando a interface utilizada pelo usuário dos serviços responsáveis por autenticação, armazenamento e processamento de IA.
 
-1. Publique o repositório no GitHub usando a branch `main`.
-2. Em **Settings > Secrets and variables > Actions**, crie:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-3. Em **Settings > Pages**, escolha **GitHub Actions** como source.
-4. Faça push para `main`. O workflow valida, compila e publica `dist`.
+🚧 Desenvolvimento
 
-A aplicação é publicada em [nitlabs-code.github.io/lunatica](https://nitlabs-code.github.io/lunatica/) e usa `HashRouter`, portanto URLs como `/#/chat/ID` continuam funcionando após atualizar a página no GitHub Pages.
+A Lunatica continua em desenvolvimento.
 
-## Deploy alternativo no Vercel
+Novos recursos, melhorias de interface, otimizações e capacidades de inteligência artificial podem ser adicionados conforme o projeto evolui.
 
-O arquivo `vercel.json` já configura o build estático. Importe o repositório no Vercel, cadastre as duas variáveis públicas e defina `VITE_BASE_PATH=/`. A Edge Function continua hospedada no Supabase; a chave Gemini não deve ser cadastrada no projeto Vercel.
+Feedbacks e relatórios de problemas ajudam no desenvolvimento da plataforma.
 
-## Segurança
+# ❤️ Feita no Brasil
 
-- Nenhuma chave Gemini ou service role é incluída no frontend.
-- RLS e grants limitam cada usuário aos próprios dados.
-- Buckets de avatar e anexos são privados e usam políticas por pasta do usuário.
-- A Edge Function valida o token no servidor e não aceita histórico arbitrário do cliente.
-- Mensagens pertencem à mesma combinação `conversation_id + user_id` por constraint de banco.
-- Rate limit por minuto e cota diária são aplicados no backend.
-- Chaves LunaMax são armazenadas somente como SHA-256, e as tabelas de inventário não têm políticas de acesso para clientes.
-- Respostas são renderizadas por `react-markdown`, sem HTML bruto.
+A Lunatica é um projeto brasileiro criado com a ideia de que boas ferramentas de inteligência artificial não precisam ser pensadas exclusivamente para o mercado internacional.
 
-Antes de produção, ajuste limites de uso ao seu plano e configure monitoramento de erros sem registrar conteúdo sensível ou secrets.
+Queremos construir uma experiência rápida, acessível e útil para brasileiros, sem deixar de funcionar para pessoas de outros lugares do mundo.
+
+Sou Lucas Gabriel R. Aguiar, apenas e único desenvolvedor do Lunatica.
+
+---
+
+<p align="center">
+  <strong>🌙 Lunatica</strong><br>
+  Inteligência artificial feita para brasileiros. 🇧🇷
+</p>
