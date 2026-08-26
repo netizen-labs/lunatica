@@ -8,7 +8,7 @@ Feita com foco no público brasileiro, a Lunatica oferece uma experiência em po
 
 A proposta é simples: criar uma IA moderna que não pareça apenas mais um chatbot genérico traduzido para português.
 
-🇧🇷 Feita para brasileiros
+# 🇧🇷 Feita para brasileiros
 
 A Lunatica nasceu no Brasil e foi desenvolvida pensando primeiro em usuários brasileiros.
 
@@ -16,7 +16,7 @@ Isso significa uma experiência construída ao redor do português, do contexto 
 
 Seja para estudar uma matéria, entender um assunto complicado, resolver um problema de código ou simplesmente desenvolver uma ideia, a Lunatica foi criada para ser uma ferramenta que você realmente possa usar no cotidiano.
 
-🧠 O que a Lunatica pode fazer?
+# 🧠 O que a Lunatica pode fazer?
 
 A Lunatica pode ajudar com diversas tarefas, incluindo:
 
@@ -31,7 +31,7 @@ A Lunatica pode ajudar com diversas tarefas, incluindo:
 - 📝 Resumos e organização de informações
 - 🌎 Conteúdo em diferentes idiomas
 
-✨ Recursos
+# ✨ Recursos
 
 A plataforma conta com:
 
@@ -52,7 +52,7 @@ A plataforma conta com:
 - Plano gratuito
 - LunaMax
 
-🧠 Memória
+# 🧠 Memória
 
 A Lunatica possui um sistema de memória que permite tornar as conversas mais contextualizadas.
 
@@ -60,7 +60,7 @@ Informações úteis, como preferências, projetos e objetivos, podem ser utiliz
 
 O usuário mantém controle sobre suas memórias e pode visualizá-las ou removê-las pelas configurações.
 
-🌙 Lunatica 1.5
+# 🌙 Lunatica 1.5
 
 Lunatica 1.5 é o nome da atual experiência de inteligência artificial da Lunatica.
 
@@ -68,7 +68,7 @@ Ela combina os sistemas desenvolvidos para a plataforma com modelos de IA utiliz
 
 A Lunatica 1.5 foi criada para oferecer respostas rápidas e úteis sem transformar a interface em um painel de avião comercial.
 
-🌙 LunaMax
+# 🌙 LunaMax
 
 Para quem utiliza a Lunatica com maior frequência, existe o LunaMax.
 
@@ -93,7 +93,7 @@ R$ 12,99 por 30 dias
 - Recursos adicionais de pesquisa quando disponíveis
 - Sem renovação automática
 
-📎 Arquivos
+# 📎 Arquivos
 
 A Lunatica consegue trabalhar com diferentes tipos de conteúdo.
 
@@ -108,7 +108,7 @@ Entre os formatos suportados estão:
 
 Isso permite utilizar a IA para analisar documentos, interpretar informações, estudar conteúdos e trabalhar com dados diretamente dentro de uma conversa.
 
-🔐 Privacidade e segurança
+# 🔐 Privacidade e segurança
 
 A Lunatica foi projetada para manter informações sensíveis protegidas.
 
@@ -116,7 +116,7 @@ Credenciais privadas utilizadas pela infraestrutura não são disponibilizadas d
 
 Avatares e anexos também são armazenados de forma privada e possuem controles de acesso vinculados ao usuário.
 
-🛠️ Tecnologia
+# 🛠️ Tecnologia
 
 A Lunatica utiliza tecnologias modernas de desenvolvimento web e inteligência artificial, incluindo:
 
@@ -124,7 +124,7 @@ React • TypeScript • Supabase • PostgreSQL • Google Gemini • GitHub
 
 A infraestrutura foi construída separando a interface utilizada pelo usuário dos serviços responsáveis por autenticação, armazenamento e processamento de IA.
 
-🚧 Desenvolvimento
+# 🚧 Desenvolvimento
 
 A Lunatica continua em desenvolvimento.
 
