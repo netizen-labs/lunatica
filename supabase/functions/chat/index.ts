@@ -3,10 +3,17 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { GeminiError, streamResponse, type GeminiAttachment, type HistoryMessage } from '../_shared/gemini.ts'
 
 const MAX_REQUESTS_PER_MINUTE = 20
-const DAILY_CREDIT_LIMIT = 30
+const FREE_DAILY_CREDIT_LIMIT = 30
+const LUNAMAX_DAILY_CREDIT_LIMIT = 300
 const HISTORY_LIMIT = 40
-const MAX_ATTACHMENTS = 4
+const MAX_ATTACHMENTS = 3
 const MAX_INLINE_BYTES = 12 * 1024 * 1024
+
+function planLimits(lunaMax: boolean) {
+  return lunaMax
+    ? { daily: LUNAMAX_DAILY_CREDIT_LIMIT, messages: 60, conversationAttachments: 30 }
+    : { daily: FREE_DAILY_CREDIT_LIMIT, messages: 12, conversationAttachments: 3 }
+}
 
 interface Clients {
   admin: SupabaseClient
@@ -57,12 +64,27 @@ function dayWindow() {
   return { start: start.toISOString(), resetsAt: reset.toISOString() }
 }
 
-async function usageStatus(admin: SupabaseClient, userId: string) {
+async function hasLunaMax(admin: SupabaseClient, userId: string) {
+  const { data, error } = await admin.from('user_plans').select('status, expires_at').eq('user_id', userId).maybeSingle()
+  if (error) throw error
+  return data?.status === 'active' && new Date(data.expires_at).getTime() > Date.now()
+}
+
+async function usageStatus(admin: SupabaseClient, userId: string, lunaMax?: boolean) {
   const { start, resetsAt } = dayWindow()
-  const { data, error } = await admin.from('usage_events').select('cost').eq('user_id', userId).gte('created_at', start).limit(100)
+  const activeLunaMax = lunaMax ?? await hasLunaMax(admin, userId)
+  const limits = planLimits(activeLunaMax)
+  const { data, error } = await admin.from('usage_events').select('cost').eq('user_id', userId).gte('created_at', start).limit(500)
   if (error) throw error
   const used = (data ?? []).reduce((total, event) => total + Number(event.cost), 0)
-  return { limit: DAILY_CREDIT_LIMIT, used, remaining: Math.max(0, DAILY_CREDIT_LIMIT - used), resetsAt }
+  return {
+    limit: limits.daily,
+    used,
+    remaining: Math.max(0, limits.daily - used),
+    resetsAt,
+    plan: activeLunaMax ? 'lunamax' : 'free',
+    conversation: { messageLimit: limits.messages, attachmentLimit: limits.conversationAttachments },
+  }
 }
 
 function bytesToBase64(bytes: Uint8Array) {
@@ -97,8 +119,10 @@ Deno.serve(async (request) => {
     const clients = await authenticate(request)
     if (clients instanceof Response) return clients
     const { admin, user, userClient } = clients
+    const lunaMax = await hasLunaMax(admin, user.id)
+    const limits = planLimits(lunaMax)
 
-    if (request.method === 'GET') return jsonResponse(await usageStatus(admin, user.id))
+    if (request.method === 'GET') return jsonResponse(await usageStatus(admin, user.id, lunaMax))
 
     const body = await request.json().catch(() => null) as { conversationId?: unknown } | null
     if (!body || typeof body.conversationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.conversationId)) {
@@ -115,19 +139,31 @@ Deno.serve(async (request) => {
     if (countError) throw countError
     if ((count ?? 0) >= MAX_REQUESTS_PER_MINUTE) return jsonResponse({ error: 'Muitas solicitações. Aguarde um minuto.' }, 429)
 
-    const { data: history, error: historyError } = await userClient.from('messages').select('id, role, content, created_at').eq('conversation_id', body.conversationId).order('created_at', { ascending: false }).limit(HISTORY_LIMIT)
+    const { data: history, error: historyError } = await userClient.from('messages').select('id, role, content, created_at').eq('conversation_id', body.conversationId).order('created_at', { ascending: false }).limit(lunaMax ? 120 : HISTORY_LIMIT)
     if (historyError) throw historyError
     if (!history?.length || history[0].role !== 'user') return jsonResponse({ error: 'A conversa precisa terminar com uma mensagem do usuário' }, 400)
 
     const { data: attachmentRows, error: attachmentError } = await userClient.from('message_attachments').select('storage_path, file_name, mime_type, size_bytes').eq('message_id', history[0].id).order('created_at', { ascending: true })
     if (attachmentError) throw attachmentError
     const attachments = (attachmentRows ?? []) as AttachmentRow[]
-    if (attachments.length > MAX_ATTACHMENTS) return jsonResponse({ error: 'Use no máximo 4 anexos por mensagem.' }, 400)
+    if (attachments.length > MAX_ATTACHMENTS) return jsonResponse({ error: 'Use no máximo 3 anexos por mensagem.' }, 400)
     const totalBytes = attachments.reduce((total, file) => total + Number(file.size_bytes), 0)
     if (totalBytes > MAX_INLINE_BYTES) return jsonResponse({ error: 'Os anexos desta mensagem ultrapassam 12 MB no total.' }, 400)
 
+    const [{ count: messageCount, error: messageCountError }, { count: conversationAttachmentCount, error: conversationAttachmentCountError }] = await Promise.all([
+      userClient.from('messages').select('id', { count: 'exact', head: true }).eq('conversation_id', body.conversationId).eq('role', 'user'),
+      userClient.from('message_attachments').select('id', { count: 'exact', head: true }).eq('conversation_id', body.conversationId),
+    ])
+    if (messageCountError || conversationAttachmentCountError) throw messageCountError ?? conversationAttachmentCountError
+    if ((messageCount ?? 0) > limits.messages || (conversationAttachmentCount ?? 0) > limits.conversationAttachments) {
+      return jsonResponse({
+        error: 'Esta conversa atingiu o limite de contexto. Comece um novo chat limpo para continuar.',
+        code: 'NEW_CHAT_REQUIRED',
+      }, 409)
+    }
+
     const cost = 1 + attachments.length
-    const usage = await usageStatus(admin, user.id)
+    const usage = await usageStatus(admin, user.id, lunaMax)
     if (usage.remaining < cost) return jsonResponse({ error: `Limite diário insuficiente. Esta mensagem custa ${cost} crédito${cost === 1 ? '' : 's'}.` }, 429)
 
     const { error: rateError } = await admin.from('rate_limits').insert({ user_id: user.id })
@@ -139,7 +175,7 @@ Deno.serve(async (request) => {
     if (memoryError) throw memoryError
     const files = await downloadAttachments(admin, attachments)
     const messages = [...history].reverse().map(({ role, content }) => ({ role, content })) as HistoryMessage[]
-    const stream = await streamResponse(messages, request.signal, { customInstructions: profile.custom_instructions, attachments: files, memories: (memoryRows ?? []).map((row) => row.summary) })
+    const stream = await streamResponse(messages, request.signal, { customInstructions: profile.custom_instructions, attachments: files, memories: (memoryRows ?? []).map((row) => row.summary), lunaMax })
     const { error: usageError } = await admin.from('usage_events').insert({ user_id: user.id, cost, attachment_count: attachments.length })
     if (usageError) throw usageError
     return new Response(stream, {

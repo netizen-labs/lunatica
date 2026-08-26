@@ -4,7 +4,7 @@ import { summarizeMemories } from '../_shared/memory.ts'
 
 const MAX_MEMORIES = 50
 const MAX_REQUESTS_PER_MINUTE = 20
-const PERSONAL_FACT_PATTERN = /\b(meu nome (?:é|e)|me chamo|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|estudante|designer|professor|professora)|estudo (?:na|no|em)|trabalho (?:na|no|em|com|como)|moro em|vivo em|prefiro|gosto de|my name is|i am|i study|i work|i live)\b/i
+const PERSONAL_FACT_PATTERN = /\b(meu nome (?:é|e)|me chamo|pode me chamar|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|estudante|designer|professor|professora)|estudo|estou estudando|estou aprendendo|trabalho|moro em|vivo em|prefiro|gosto de|adoro|não gosto|meu objetivo|quero aprender|quero criar|estou criando|estou desenvolvendo|meu projeto|minha ideia|my name is|i am|i study|i work|i live|my project|my goal)\b/i
 
 interface Clients { admin: SupabaseClient; userClient: SupabaseClient; user: User }
 

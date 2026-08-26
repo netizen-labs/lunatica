@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.memory]
 verify_jwt = true
+
+[functions.redeem-plan]
+verify_jwt = true

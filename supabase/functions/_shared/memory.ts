@@ -1,11 +1,11 @@
-export type MemoryCategory = 'identity' | 'education' | 'work' | 'preference' | 'personal' | 'custom'
+export type MemoryCategory = 'identity' | 'education' | 'work' | 'preference' | 'personal' | 'project' | 'goal' | 'custom'
 
 export interface MemoryDraft {
   summary: string
   category: MemoryCategory
 }
 
-const categories = new Set<MemoryCategory>(['identity', 'education', 'work', 'preference', 'personal', 'custom'])
+const categories = new Set<MemoryCategory>(['identity', 'education', 'work', 'preference', 'personal', 'project', 'goal', 'custom'])
 
 export async function summarizeMemories(content: string, existing: string[], manual: boolean, signal: AbortSignal) {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
@@ -14,7 +14,8 @@ export async function summarizeMemories(content: string, existing: string[], man
 
   const prompt = `Você organiza a memória pessoal da Lunatica 1.5.
 
-Extraia apenas fatos estáveis e úteis sobre o próprio usuário: nome, estudo, profissão, local, preferências duradouras, objetivos ou contexto pessoal relevante.
+Extraia apenas fatos estáveis e úteis sobre o próprio usuário: nome, estudo, profissão, local, preferências duradouras, objetivos, projetos pessoais ou contexto criativo relevante.
+Use a categoria "project" para algo que o usuário está construindo ou criando e "goal" para um objetivo duradouro.
 Não salve perguntas, pedidos momentâneos, dados sensíveis, senhas, chaves, informações financeiras, médicas ou inferências incertas.
 Escreva cada memória em português, em uma frase curta, objetiva e na terceira pessoa, começando com "O usuário".
 Não repita fatos já existentes. ${manual ? 'O usuário pediu explicitamente para memorizar o conteúdo; produza no máximo uma memória.' : 'Se não houver um fato pessoal estável, retorne uma lista vazia.'}

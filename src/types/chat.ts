@@ -19,6 +19,11 @@ export interface UsageStatus {
   used: number
   remaining: number
   resetsAt: string
+  plan: 'free' | 'lunamax'
+  conversation: {
+    messageLimit: number
+    attachmentLimit: number
+  }
 }
 
 export interface MemoryResponse {
@@ -28,4 +33,11 @@ export interface MemoryResponse {
 export interface ApiErrorBody {
   error?: string
   code?: string
+}
+
+export interface PlanRedemptionResponse {
+  plan: 'lunamax'
+  status: 'active'
+  activated_at: string
+  expires_at: string
 }

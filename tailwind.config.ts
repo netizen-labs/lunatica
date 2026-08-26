@@ -13,6 +13,7 @@ export default {
           800: '#201f26',
         },
         lunar: {
+          200: '#ddd6fe',
           300: '#c4b5fd',
           400: '#a78bfa',
           500: '#8b5cf6',

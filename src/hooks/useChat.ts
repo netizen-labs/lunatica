@@ -13,11 +13,11 @@ interface UseChatOptions {
   onAnalyzeMemory?: (messageId: string) => Promise<void>
 }
 
-const MAX_ATTACHMENTS = 4
+const MAX_ATTACHMENTS = 3
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
 const MAX_TOTAL_SIZE = 12 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'])
-const MEMORY_SIGNAL = /\b(meu nome|me chamo|pode me chamar|eu estudo|estudo (?:na|no|em)|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|designer|estudante)|eu trabalho|trabalho (?:na|no|com|como)|eu prefiro|gosto de|moro em|minha profissão)\b/i
+const MEMORY_SIGNAL = /\b(meu nome|me chamo|pode me chamar|eu estudo|estou estudando|estou aprendendo|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|designer|estudante)|eu trabalho|eu prefiro|gosto de|adoro|não gosto|moro em|minha profissão|meu objetivo|quero aprender|quero criar|estou criando|estou desenvolvendo|meu projeto|minha ideia)\b/i
 
 function safeFileName(name: string) {
   return name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'anexo'
@@ -137,7 +137,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
   }, [onNotify, refreshConversations, refreshUsage, session, user.id])
 
   const uploadFiles = useCallback(async (conversationId: string, messageId: string, files: File[]) => {
-    if (files.length > MAX_ATTACHMENTS) throw new Error('Use no máximo 4 anexos')
+    if (files.length > MAX_ATTACHMENTS) throw new Error('Use no máximo 3 anexos')
     if (files.some((file) => !ALLOWED_TYPES.has(file.type) || file.size > MAX_ATTACHMENT_SIZE)) throw new Error('Anexo inválido ou maior que 5 MB')
     if (files.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_SIZE) throw new Error('Os anexos devem somar no máximo 12 MB')
     const uploaded: string[] = []
@@ -164,6 +164,14 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     const content = rawContent.trim() || (files.length ? 'Analise os anexos enviados.' : '')
     if (!content || generating) return activeId
     const cost = 1 + files.length
+    const userMessageCount = messages.filter((message) => message.role === 'user').length
+    const conversationAttachmentCount = messages.reduce((total, message) => total + (message.attachments?.length ?? 0), 0)
+    const messageLimit = usage?.conversation.messageLimit ?? 12
+    const attachmentLimit = usage?.conversation.attachmentLimit ?? 3
+    if (activeId && (userMessageCount >= messageLimit || conversationAttachmentCount + files.length > attachmentLimit)) {
+      onNotify('Esta conversa atingiu o limite de contexto. Comece um novo chat limpo para continuar.', 'info')
+      return activeId
+    }
     if (usage && usage.remaining < cost) {
       onNotify(`Você precisa de ${cost} créditos, mas restam ${usage.remaining} hoje.`, 'error')
       return activeId
@@ -194,7 +202,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       if (import.meta.env.DEV) console.error(error)
       return conversationId
     }
-  }, [activeId, generate, generating, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
+  }, [activeId, generate, generating, messages, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
 
   const removeStoredAttachments = useCallback(async (query: 'conversation' | 'messages' | 'all', value?: string | string[]) => {
     let request = supabase.from('message_attachments').select('storage_path')
@@ -263,5 +271,5 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     await generate(message.conversation_id)
   }, [generate, generating, onAnalyzeMemory, removeStoredAttachments])
 
-  return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, renameConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage }
+  return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, renameConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage, refreshUsage }
 }

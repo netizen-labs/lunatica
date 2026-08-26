@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Brain, Coins, Lightbulb, Orbit, PenLine, Search, Sparkles, WifiOff } from 'lucide-react'
+import { ArrowRight, Brain, Coins, Lightbulb, Orbit, PenLine, Search, Sparkles, WifiOff } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MessageBubble } from '../components/chat/MessageBubble'
 import { MessageComposer } from '../components/chat/MessageComposer'
-import { MemoryDialog } from '../components/memory/MemoryDialog'
 import { ProfileDialog } from '../components/profile/ProfileDialog'
 import { MobileMenuButton, Sidebar } from '../components/sidebar/Sidebar'
-import { SettingsDialog } from '../components/settings/SettingsDialog'
+import { SettingsDialog, type SettingsTab } from '../components/settings/SettingsDialog'
 import { useAuth } from '../contexts/AuthContext'
 import { useProfile } from '../contexts/ProfileContext'
 import { useToast } from '../contexts/ToastContext'
 import { useChat } from '../hooks/useChat'
 import { useMemories } from '../hooks/useMemories'
+import { usePlan } from '../hooks/usePlan'
 import { friendlyError } from '../lib/utils'
 
 const suggestions = [
@@ -29,13 +29,14 @@ export function ChatPage() {
   const { conversationId } = useParams()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
   const [profileOpen, setProfileOpen] = useState(false)
-  const [memoryOpen, setMemoryOpen] = useState(false)
   const [online, setOnline] = useState(navigator.onLine)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   if (!user || !session) throw new Error('ChatPage requer uma sessão autenticada')
   const memory = useMemories(session)
+  const plan = usePlan(session)
   const chat = useChat({ user, session, onNotify: showToast, onAnalyzeMemory: memory.analyzeMessage })
   const openConversation = chat.openConversation
 
@@ -69,6 +70,15 @@ export function ChatPage() {
   const activeConversation = chat.conversations.find((conversation) => conversation.id === chat.activeId)
   const lastAssistantId = [...chat.messages].reverse().find((message) => message.role === 'assistant' && !message.id.startsWith('stream-'))?.id
   const userLabel = profile?.display_name || user.user_metadata.display_name as string | undefined || user.email?.split('@')[0] || 'Conta'
+  const userMessageCount = chat.messages.filter((message) => message.role === 'user').length
+  const attachmentCount = chat.messages.reduce((total, message) => total + (message.attachments?.length ?? 0), 0)
+  const contextLimitReached = Boolean(chat.activeId && chat.usage && (userMessageCount >= chat.usage.conversation.messageLimit || attachmentCount >= chat.usage.conversation.attachmentLimit))
+  const dailyLimitReached = chat.usage?.remaining === 0
+
+  function openSettings(tab: SettingsTab) {
+    setSettingsTab(tab)
+    setSettingsOpen(true)
+  }
 
   return (
     <div className="app-shell flex h-dvh overflow-hidden">
@@ -81,26 +91,27 @@ export function ChatPage() {
         username={profile?.username}
         avatarUrl={avatarUrl}
         remainingCredits={chat.usage?.remaining}
+        creditLimit={chat.usage?.limit}
         onMobileClose={() => setMobileOpen(false)}
         onNewChat={newChat}
         onSelect={selectConversation}
         onRename={chat.renameConversation}
         onDelete={removeConversation}
         onProfile={() => setProfileOpen(true)}
-        onSettings={() => setSettingsOpen(true)}
+        onSettings={() => openSettings('general')}
         onLogout={signOut}
       />
 
       <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="mission-header">
           <MobileMenuButton onClick={() => setMobileOpen(true)} />
+          <button type="button" className={`lunamax-button ${plan.isLunaMax ? 'active' : ''}`} onClick={() => openSettings('plan')}><Sparkles className="h-3.5 w-3.5" /><span>{plan.isLunaMax ? 'LunaMax ativo' : 'Comprar LunaMax'}</span></button>
           <div className="min-w-0 flex-1"><span className="micro-label hidden sm:block">SESSÃO ATIVA</span><h1 className="truncate text-sm font-medium text-zinc-200">{activeConversation?.title || 'Nova conversa'}</h1></div>
-          <button type="button" className="status-pill flex" onClick={() => { memory.clearNotice(); setMemoryOpen(true) }} aria-label={`Abrir memórias, ${memory.memories.length} salvas`}><Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">Memórias</span>{memory.memories.length > 0 && <strong className="text-lunar-300">{memory.memories.length}</strong>}</button>
           {chat.usage && <span className="status-pill hidden sm:flex"><Coins className="h-3.5 w-3.5" /> {chat.usage.remaining} créditos</span>}
           {!online && <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-300"><WifiOff className="h-3.5 w-3.5" /> Offline</span>}
         </header>
 
-        {memory.notice && <button type="button" className="memory-saved-banner" onClick={() => { memory.clearNotice(); setMemoryOpen(true) }}><span className="memory-pulse"><Brain className="h-3.5 w-3.5" /></span><span><strong>{memory.notice}</strong><small>Toque para ver o que a Lunatica aprendeu</small></span></button>}
+        {memory.notice && <button type="button" className="memory-saved-banner" onClick={() => { memory.clearNotice(); openSettings('memory') }}><span className="memory-pulse"><Brain className="h-3.5 w-3.5" /></span><span><strong>{memory.notice}</strong><small>Toque para revisar no banco de memória</small></span></button>}
 
         <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           {chat.loadingMessages ? (
@@ -120,13 +131,12 @@ export function ChatPage() {
         </div>
 
         <div className="composer-dock">
-          <MessageComposer generating={chat.generating} disabled={!online || chat.usage?.remaining === 0} allowAttachments remainingCredits={chat.usage?.remaining} onSend={send} onStop={chat.stopGeneration} />
+          {dailyLimitReached || contextLimitReached ? <div className="limit-panel"><div className="limit-panel-icon"><Orbit className="h-5 w-5" /></div><div className="min-w-0 flex-1"><strong>{dailyLimitReached ? 'Seus créditos de hoje acabaram' : 'Esta conversa chegou ao limite de contexto'}</strong><p>{dailyLimitReached ? 'O limite gratuito volta no próximo ciclo. O LunaMax amplia o uso diário.' : 'Abra um chat limpo para continuar sem o contexto e os anexos desta conversa.'}</p></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><button type="button" className="btn-secondary" onClick={newChat}>Novo chat <ArrowRight className="h-4 w-4" /></button><button type="button" className="btn-primary" onClick={() => openSettings('plan')}>Ver LunaMax</button></div></div> : <MessageComposer generating={chat.generating} disabled={!online} allowAttachments remainingCredits={chat.usage?.remaining} onSend={send} onStop={chat.stopGeneration} />}
         </div>
       </main>
 
       <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
-      <SettingsDialog open={settingsOpen} remainingCredits={chat.usage?.remaining} onClose={() => setSettingsOpen(false)} onClearHistory={async () => { await chat.clearHistory(); navigate('/') }} />
-      <MemoryDialog open={memoryOpen} memories={memory.memories} loading={memory.loading} onClose={() => { memory.clearNotice(); setMemoryOpen(false) }} onAdd={memory.addMemory} onDelete={memory.deleteMemory} />
+      <SettingsDialog key={settingsTab} open={settingsOpen} initialTab={settingsTab} usage={chat.usage} plan={plan.plan} memories={memory.memories} memoryLoading={memory.loading} onClose={() => setSettingsOpen(false)} onClearHistory={async () => { await chat.clearHistory(); navigate('/') }} onAddMemory={memory.addMemory} onDeleteMemory={memory.deleteMemory} onRedeemPlan={async (code, acceptedDisclaimer) => { await plan.redeem(code, acceptedDisclaimer); await chat.refreshUsage() }} />
     </div>
   )
 }

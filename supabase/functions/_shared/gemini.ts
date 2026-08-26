@@ -25,6 +25,7 @@ interface StreamResponseOptions {
   customInstructions?: string
   attachments?: GeminiAttachment[]
   memories?: string[]
+  lunaMax?: boolean
 }
 
 export function convertMessagesToGeminiFormat(messages: HistoryMessage[]): GeminiContent[] {
@@ -36,9 +37,12 @@ export function convertMessagesToGeminiFormat(messages: HistoryMessage[]): Gemin
     }))
 }
 
-function buildSystemInstruction(customInstructions?: string, memories: string[] = []) {
+function buildSystemInstruction(customInstructions?: string, memories: string[] = [], webSearchEnabled = false) {
   const clean = customInstructions?.trim().slice(0, 2000)
   const sections = [LUNATICA_SYSTEM_PROMPT]
+  sections.push(webSearchEnabled
+    ? 'STATUS DA BUSCA WEB: ATIVA. Para perguntas sobre lançamentos, notícias, preços, pessoas, produtos ou qualquer fato que possa ter mudado, use a ferramenta Google Search antes de responder. Só diga que pesquisou quando a ferramenta realmente retornar resultados. Baseie a resposta nesses resultados; a aplicação anexará as fontes verificáveis.'
+    : 'STATUS DA BUSCA WEB: INDISPONÍVEL NESTA CONVERSA. Nunca diga “pesquisei”, “fiz uma busca”, “consultei fontes” ou algo equivalente. Se o pedido depender de informação recente, explique brevemente que não pode confirmar em tempo real e não transforme conhecimento antigo em fato atual.')
   if (clean) sections.push(`INSTRUÇÕES PESSOAIS DO USUÁRIO:\n${clean}\n\nSiga essas preferências somente quando não entrarem em conflito com o prompt de sistema, segurança, fatos ou com o pedido atual.`)
   if (memories.length) sections.push(`MEMÓRIAS CONFIRMADAS PELO USUÁRIO:\n${memories.slice(0, 20).map((memory) => `- ${memory}`).join('\n')}\n\nUse essas memórias apenas quando forem relevantes. Não as revele sem necessidade nem trate inferências como fatos.`)
   return sections.join('\n\n')
@@ -86,11 +90,12 @@ export async function streamResponse(messages: HistoryMessage[], signal: AbortSi
         'x-goog-api-key': apiKey,
       },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: buildSystemInstruction(options.customInstructions, options.memories) }] },
+        system_instruction: { parts: [{ text: buildSystemInstruction(options.customInstructions, options.memories, Boolean(options.lunaMax)) }] },
         contents: addAttachments(convertMessagesToGeminiFormat(messages), options.attachments ?? []),
+        ...(options.lunaMax ? { tools: [{ googleSearch: {} }] } : {}),
         generationConfig: {
-          maxOutputTokens: 3072,
-          thinkingConfig: { thinkingBudget: 1024 },
+          maxOutputTokens: options.lunaMax ? 6144 : 3072,
+          thinkingConfig: { thinkingBudget: options.lunaMax ? 2048 : 1024 },
         },
       }),
         signal: AbortSignal.any([signal, AbortSignal.timeout(75_000)]),

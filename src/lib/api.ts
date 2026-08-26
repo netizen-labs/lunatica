@@ -1,5 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
-import type { ApiErrorBody, ChatRequest, MemoryResponse, UsageStatus } from '../types/chat'
+import type { ApiErrorBody, ChatRequest, MemoryResponse, PlanRedemptionResponse, UsageStatus } from '../types/chat'
 import { supabaseProjectUrl, supabasePublicKey } from './supabase'
 
 interface StreamChatOptions {
@@ -9,14 +9,29 @@ interface StreamChatOptions {
   onText: (text: string) => void
 }
 
-function textFromGeminiEvent(payload: string) {
+interface GroundingSource {
+  title: string
+  uri: string
+}
+
+function contentFromGeminiEvent(payload: string): { text: string; sources: GroundingSource[] } {
   try {
     const parsed = JSON.parse(payload) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> }
+        groundingMetadata?: { groundingChunks?: Array<{ web?: { title?: string; uri?: string } }> }
+      }>
     }
-    return parsed.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? ''
+    const candidate = parsed.candidates?.[0]
+    const text = candidate?.content?.parts?.map((part) => part.text ?? '').join('') ?? ''
+    const sources = (candidate?.groundingMetadata?.groundingChunks ?? []).flatMap((chunk): GroundingSource[] => {
+      const uri = chunk.web?.uri?.trim()
+      if (!uri || !/^https:\/\//i.test(uri)) return []
+      return [{ title: chunk.web?.title?.trim() || new URL(uri).hostname, uri }]
+    })
+    return { text, sources }
   } catch {
-    return ''
+    return { text: '', sources: [] }
   }
 }
 
@@ -44,6 +59,7 @@ export async function streamChatResponse({ conversationId, session, signal, onTe
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
+  const groundingSources = new Map<string, string>()
 
   while (true) {
     const { done, value } = await reader.read()
@@ -56,15 +72,28 @@ export async function streamChatResponse({ conversationId, session, signal, onTe
       for (const line of event.split('\n')) {
         if (!line.startsWith('data:')) continue
         const data = line.slice(5).trim()
-        if (data && data !== '[DONE]') onText(textFromGeminiEvent(data))
+        if (data && data !== '[DONE]') {
+          const next = contentFromGeminiEvent(data)
+          if (next.text) onText(next.text)
+          for (const source of next.sources) groundingSources.set(source.uri, source.title)
+        }
       }
     }
   }
 
   if (buffer.trim()) {
     for (const line of buffer.split('\n')) {
-      if (line.startsWith('data:')) onText(textFromGeminiEvent(line.slice(5).trim()))
+      if (line.startsWith('data:')) {
+        const next = contentFromGeminiEvent(line.slice(5).trim())
+        if (next.text) onText(next.text)
+        for (const source of next.sources) groundingSources.set(source.uri, source.title)
+      }
     }
+  }
+
+  if (groundingSources.size) {
+    const sources = [...groundingSources.entries()].slice(0, 8).map(([uri, title]) => `- [${title.replace(/[\[\]]/g, '')}](${uri})`).join('\n')
+    onText(`\n\n### Fontes\n${sources}`)
   }
 }
 
@@ -102,4 +131,22 @@ export async function requestMemory(session: Session, payload: { action: 'analyz
     throw new Error(`${response.status}: ${body.error || 'Não foi possível salvar a memória'}`)
   }
   return response.json() as Promise<MemoryResponse>
+}
+
+export async function redeemLunaMax(session: Session, code: string, acceptedDisclaimer: boolean): Promise<PlanRedemptionResponse> {
+  if (!supabaseProjectUrl) throw new Error('Supabase não configurado')
+  const response = await fetch(`${supabaseProjectUrl}/functions/v1/redeem-plan`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: supabasePublicKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ code, acceptedDisclaimer }),
+  })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new Error(`${response.status}: ${body.error || 'Não foi possível ativar o LunaMax'}`)
+  }
+  return response.json() as Promise<PlanRedemptionResponse>
 }
