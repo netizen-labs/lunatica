@@ -8,6 +8,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
+const THEME_STORAGE_VERSION = '2'
 
 function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle('light', theme === 'light')
@@ -19,6 +20,11 @@ function applyTheme(theme: Theme) {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     const saved = localStorage.getItem('lunatica-theme')
+    const storageVersion = localStorage.getItem('lunatica-theme-version')
+    if (storageVersion !== THEME_STORAGE_VERSION) {
+      localStorage.setItem('lunatica-theme-version', THEME_STORAGE_VERSION)
+      return saved === 'dark' ? 'dark' : 'light'
+    }
     return saved === 'black' || saved === 'dark' ? saved : 'light'
   })
 
