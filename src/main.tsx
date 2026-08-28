@@ -8,6 +8,15 @@ import { ToastProvider } from './contexts/ToastContext'
 import { ProfileProvider } from './contexts/ProfileContext'
 import './index.css'
 
+const CHUNK_RELOAD_KEY = 'lunatica-last-chunk-reload'
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault()
+  const previousReload = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0)
+  if (Date.now() - previousReload < 15_000) return
+  sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()))
+  window.location.reload()
+})
+
 // Links de autenticação inválidos chegam no fragmento, que também é usado pelo
 // HashRouter. Normalize antes de montar o React para exibir uma mensagem útil.
 if (window.location.hash.startsWith('#error=')) {

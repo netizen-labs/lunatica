@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, Brain, Coins, Lightbulb, Orbit, PenLine, Search, Sparkles, WifiOff } from 'lucide-react'
+import { ArrowRight, Brain, CircleAlert, Coins, Lightbulb, Orbit, PenLine, RefreshCw, Search, Sparkles, WifiOff } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MessageBubble } from '../components/chat/MessageBubble'
 import { MessageComposer } from '../components/chat/MessageComposer'
@@ -69,6 +69,8 @@ export function ChatPage() {
 
   const activeConversation = chat.conversations.find((conversation) => conversation.id === chat.activeId)
   const lastAssistantId = [...chat.messages].reverse().find((message) => message.role === 'assistant' && !message.id.startsWith('stream-'))?.id
+  const lastMessage = chat.messages.at(-1)
+  const responsePending = Boolean(lastMessage?.role === 'user' && !chat.generating && !chat.loadingMessages)
   const userLabel = profile?.display_name || user.user_metadata.display_name as string | undefined || user.email?.split('@')[0] || 'Conta'
   const userMessageCount = chat.messages.filter((message) => message.role === 'user').length
   const attachmentCount = chat.messages.reduce((total, message) => total + (message.attachments?.length ?? 0), 0)
@@ -105,7 +107,7 @@ export function ChatPage() {
       <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="mission-header">
           <MobileMenuButton onClick={() => setMobileOpen(true)} />
-          <button type="button" className={`lunamax-button ${plan.isLunaMax ? 'active' : ''}`} onClick={() => openSettings('plan')}><Sparkles className="h-3.5 w-3.5" /><span>{plan.isLunaMax ? 'LunaMax ativo' : 'Comprar LunaMax'}</span></button>
+          <button type="button" className={`lunamax-button ${plan.isLunaMax ? 'active' : ''}`} onClick={() => openSettings('plan')}><Sparkles className="h-3.5 w-3.5" /><span>{plan.isLunaMax ? 'LunaMax ativo' : <><span className="hidden min-[420px]:inline">Comprar </span>LunaMax</>}</span></button>
           <div className="min-w-0 flex-1"><span className="micro-label hidden sm:block">SESSÃO ATIVA</span><h1 className="truncate text-sm font-medium text-zinc-200">{activeConversation?.title || 'Nova conversa'}</h1></div>
           {chat.usage && <span className="status-pill hidden sm:flex"><Coins className="h-3.5 w-3.5" /> {chat.usage.remaining} créditos</span>}
           {!online && <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-300"><WifiOff className="h-3.5 w-3.5" /> Offline</span>}
@@ -113,7 +115,7 @@ export function ChatPage() {
 
         {memory.notice && <button type="button" className="memory-saved-banner" onClick={() => { memory.clearNotice(); openSettings('memory') }}><span className="memory-pulse"><Brain className="h-3.5 w-3.5" /></span><span><strong>{memory.notice}</strong><small>Toque para revisar no banco de memória</small></span></button>}
 
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+        <div className="chat-canvas min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           {chat.loadingMessages ? (
             <div className="mx-auto max-w-3xl space-y-8 px-6 py-10">{Array.from({ length: 3 }).map((_, index) => <div key={index} className={`h-20 animate-pulse rounded-2xl bg-zinc-200/70 dark:bg-white/[0.04] ${index % 2 === 0 ? 'ml-auto w-2/3' : 'w-full'}`} />)}</div>
           ) : chat.messages.length === 0 ? (
@@ -125,6 +127,7 @@ export function ChatPage() {
           ) : (
             <div className="space-y-8 py-8 sm:space-y-10 sm:py-10">
               {chat.messages.map((message) => <MessageBubble key={message.id} message={message} generating={chat.generating} canRegenerate={message.id === lastAssistantId} onRegenerate={chat.regenerateMessage} onEdit={chat.editUserMessage} />)}
+              {responsePending && <div className="response-recovery" role="status"><span><CircleAlert className="h-4 w-4" /></span><div><strong>A resposta não foi concluída</strong><p>Sua mensagem está salva. Você pode tentar gerar a resposta novamente sem repetir o texto.</p></div><button type="button" className="btn-secondary shrink-0" onClick={() => void chat.retryGeneration()}><RefreshCw className="h-4 w-4" /> Tentar novamente</button></div>}
               <div ref={bottomRef} />
             </div>
           )}

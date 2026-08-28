@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { ArrowLeft, ArrowRight, AtSign, Camera, Check, Code2, Heart, Moon, Orbit, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, AtSign, Camera, Check, Code2, Heart, Moon, Orbit, Sparkles, Sun } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Logo } from '../components/ui/Logo'
 import { useAuth } from '../contexts/AuthContext'
@@ -83,7 +83,7 @@ export function OnboardingPage() {
           </div>}
 
           {step === 1 && <div className="animate-fade-in"><span className="micro-label">02 · PREFERÊNCIAS</span><h2 className="mt-3 text-2xl font-semibold tracking-tight">Ajuste a atmosfera.</h2><p className="mt-2 text-sm text-[var(--muted)]">Escolha o contraste e diga como prefere receber respostas.</p>
-            <fieldset className="mt-8"><legend className="text-sm font-medium">Tema</legend><div className="mt-3 grid gap-3 sm:grid-cols-2">{([{ value: 'black', label: 'Preto lunar', note: 'Contraste máximo e fundo puro.' }, { value: 'dark', label: 'Escuro grafite', note: 'Tons de carvão mais suaves.' }] as const).map((option) => <button key={option.value} type="button" onClick={() => setTheme(option.value as Theme)} className={`theme-card ${theme === option.value ? 'active' : ''}`}><span className={`theme-swatch ${option.value}`}><Moon className="h-4 w-4" /></span><span><strong>{option.label}</strong><small>{option.note}</small></span></button>)}</div></fieldset>
+            <fieldset className="mt-8"><legend className="text-sm font-medium">Tema</legend><div className="mt-3 grid gap-3 sm:grid-cols-3">{([{ value: 'light', label: 'Claro lunar', note: 'Branco suave e arejado.', icon: Sun }, { value: 'dark', label: 'Escuro grafite', note: 'Carvão confortável.', icon: Moon }, { value: 'black', label: 'Preto eclipse', note: 'Contraste máximo.', icon: Moon }] as const).map((option) => <button key={option.value} type="button" onClick={() => setTheme(option.value as Theme)} className={`theme-card ${theme === option.value ? 'active' : ''}`}><span className={`theme-swatch ${option.value}`}><option.icon className="h-4 w-4" /></span><span><strong>{option.label}</strong><small>{option.note}</small></span></button>)}</div></fieldset>
             <label className="mt-7 block text-sm font-medium">Instruções pessoais para a Lunatica<textarea className="field mt-2 min-h-36 resize-y leading-6" value={instructions} onChange={(event) => setInstructions(event.target.value)} maxLength={2000} placeholder="Ex.: responda em português, seja direto, use exemplos quando explicar código…" /><span className="mt-1.5 flex justify-between text-xs text-[var(--muted)]"><span>Complementa o prompt original; não o substitui.</span><span>{instructions.length}/2000</span></span></label>
           </div>}
 

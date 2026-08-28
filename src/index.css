@@ -4,17 +4,36 @@
 
 @layer base {
   :root {
+    --app-bg: #f7f7fb;
+    --panel: #ffffff;
+    --panel-elevated: #ffffff;
+    --sidebar: #f0eef8;
+    --line: rgba(43, 33, 63, .11);
+    --muted: #746f7e;
+    --text: #211b2b;
+    --text-soft: #554e61;
+    --accent: #7557d6;
+    --accent-soft: #eee9ff;
+    --shadow: 0 20px 60px rgba(55, 40, 84, .10);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+    background: var(--app-bg);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  :root.dark {
     --app-bg: #101014;
     --panel: #16151b;
     --panel-elevated: #1c1a22;
     --sidebar: #0d0c11;
     --line: rgba(255,255,255,.095);
     --muted: #92909b;
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #f5f3f7;
-    background: var(--app-bg);
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
+    --text: #f5f3f7;
+    --text-soft: #c2bec9;
+    --accent: #a78bfa;
+    --accent-soft: rgba(139, 92, 246, .13);
+    --shadow: 0 20px 60px rgba(0, 0, 0, .32);
   }
 
   :root.black {
@@ -27,7 +46,7 @@
   }
 
   * { border-color: var(--line); }
-  body { margin: 0; min-height: 100vh; background: var(--app-bg); color: #f5f3f7; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; min-height: 100vh; background: var(--app-bg); color: var(--text); -webkit-font-smoothing: antialiased; }
   button, input, textarea, select { font: inherit; }
   button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible {
     @apply outline-none ring-2 ring-lunar-400 ring-offset-2;
@@ -38,12 +57,16 @@
 }
 
 @layer components {
-  .app-shell { background: var(--app-bg); color: #f5f3f7; }
+  .app-shell { background: var(--app-bg); color: var(--text); }
   .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-lunar-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-lunar-400 disabled:cursor-not-allowed disabled:opacity-40; box-shadow: 0 8px 28px rgba(139,92,246,.16); }
   .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-white/20 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40; background: rgba(255,255,255,.035); }
   .field { @apply w-full rounded-xl border px-3.5 py-3 text-sm text-zinc-100 outline-none transition placeholder:text-zinc-600 focus:border-lunar-400; background: rgba(255,255,255,.035); }
   .icon-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-35; }
   .micro-label { @apply text-[10px] font-semibold uppercase tracking-[.2em] text-zinc-500; }
+  .logo-mark { filter: drop-shadow(0 8px 16px rgba(84,57,147,.14)); }
+  .logo-mark-bg { fill: #111016; stroke: rgba(255,255,255,.13); }
+  .logo-orbit { stroke: #ddd6fe; opacity: .82; }
+  .logo-star { fill: #faf8ff; }
 
   .mission-header { @apply flex h-16 shrink-0 items-center gap-3 border-b px-4 backdrop-blur-md sm:px-6; border-color: var(--line); background: color-mix(in srgb, var(--app-bg) 88%, transparent); }
   .status-pill { @apply items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-zinc-400; background: rgba(255,255,255,.025); }
@@ -67,6 +90,8 @@
   .lunar-orbit-b::before { right: 88px; top: 30px; }
 
   .composer-dock { @apply shrink-0 pt-2; background: linear-gradient(to top, var(--app-bg) 72%, transparent); }
+  .chat-canvas { position: relative; }
+  .chat-canvas::before { content: ''; position: fixed; inset: 64px 0 0 296px; pointer-events: none; opacity: .28; background-image: radial-gradient(rgba(139,92,246,.16) .7px, transparent .7px); background-size: 28px 28px; mask-image: linear-gradient(to bottom, black, transparent 58%); }
   .composer-shell { @apply overflow-hidden rounded-2xl border transition focus-within:border-lunar-400/60; background: var(--panel-elevated); box-shadow: 0 16px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.025); }
   .composer-action { @apply mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lunar-500 text-white transition hover:bg-lunar-400 disabled:bg-white/[0.07] disabled:text-zinc-600; }
   .composer-action.stop { @apply bg-white text-zinc-950 hover:bg-zinc-200; }
@@ -147,12 +172,153 @@
   .limit-panel-icon { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lunar-400/15 text-lunar-200; }
   .limit-panel strong { @apply text-sm text-zinc-100; }
   .limit-panel p { @apply mt-1 text-xs leading-5 text-zinc-500; }
+  .response-recovery { @apply mx-auto flex w-[calc(100%_-_2rem)] max-w-3xl flex-col items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] p-4 sm:flex-row sm:items-center; }
+  .response-recovery > span { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300; }
+  .response-recovery > div { @apply min-w-0 flex-1; }
+  .response-recovery strong { @apply text-sm; }
+  .response-recovery p { @apply mt-1 text-xs leading-5 text-[var(--muted)]; }
 }
 
+/* Light mode is intentionally more editorial than a simple color inversion. */
+:root.light .app-shell {
+  background:
+    radial-gradient(circle at 78% -15%, rgba(139, 92, 246, .10), transparent 32rem),
+    var(--app-bg);
+}
+:root.light .btn-primary { background: #7557d6; box-shadow: 0 10px 28px rgba(117, 87, 214, .22); }
+:root.light .btn-primary:hover { background: #6748c7; }
+:root.light .btn-secondary { color: var(--text); background: rgba(255,255,255,.76); border-color: var(--line); box-shadow: 0 4px 16px rgba(44,32,69,.05); }
+:root.light .btn-secondary:hover { border-color: rgba(117,87,214,.30); background: white; }
+:root.light .field { color: var(--text); background: #fbfaff; border-color: rgba(49,37,72,.13); box-shadow: inset 0 1px 2px rgba(55,40,84,.03); }
+:root.light .field::placeholder { color: #aaa4b3; }
+:root.light .icon-btn { color: #777180; }
+:root.light .icon-btn:hover { color: #332b3d; background: rgba(68,52,93,.07); }
+:root.light .micro-label { color: #81798c; }
+:root.light .logo-mark-bg { fill: #7557d6; stroke: #6748c7; }
+:root.light .logo-crescent { fill: #faf8ff; }
+:root.light .logo-orbit { stroke: #ded6ff; opacity: .76; }
+:root.light .logo-star { fill: #ffffff; }
+:root.light .mission-header { background: rgba(250,249,253,.88); box-shadow: 0 1px 0 rgba(43,33,63,.04); }
+:root.light .mission-header h1 { color: #342d3e; }
+:root.light .status-pill { color: #6e6878; background: white; box-shadow: 0 4px 18px rgba(45,34,66,.06); }
+:root.light .lunamax-button { color: #5d3fb9; background: #eee9ff; border-color: #d9ceff; box-shadow: 0 7px 22px rgba(117,87,214,.12); }
+:root.light .lunamax-button:hover { background: #e6ddff; border-color: #c6b5ff; }
+:root.light .main-sidebar,
+:root.light .guest-sidebar { background: rgba(244,242,249,.92); }
+:root.light .main-sidebar .text-zinc-300,
+:root.light .guest-sidebar .text-zinc-300 { color: #554d60; }
+:root.light .main-sidebar .text-zinc-400,
+:root.light .guest-sidebar .text-zinc-400 { color: #777080; }
+:root.light .main-sidebar .text-lunar-300,
+:root.light .guest-sidebar .text-lunar-300 { color: #6849c3; }
+:root.light .main-sidebar .border-white\/10,
+:root.light .guest-sidebar .border-white\/10 { border-color: var(--line); }
+:root.light .new-chat-button { color: #49377b; background: white; border-color: #d9d1eb; box-shadow: 0 8px 24px rgba(57,43,83,.07); }
+:root.light .new-chat-button:hover { background: #f8f5ff; border-color: #b9a5ec; }
+:root.light .sidebar-feature { color: #777080; }
+:root.light .sidebar-feature strong { color: #3b3346; }
+:root.light .modal-panel { border-color: rgba(49,37,72,.12); box-shadow: 0 30px 90px rgba(39,27,63,.20); }
+:root.light .modal-panel .text-zinc-200,
+:root.light .modal-panel .text-zinc-300 { color: #4b4355; }
+:root.light .modal-panel .text-zinc-400,
+:root.light .modal-panel .text-zinc-500 { color: #777080; }
+:root.light .modal-panel .text-lunar-200,
+:root.light .modal-panel .text-lunar-300 { color: #6545c1; }
+:root.light .modal-panel .border-white\/10 { border-color: var(--line); }
+:root.light .profile-summary { background: #f8f6fc; border-color: rgba(55,42,79,.10); }
+:root.light .composer-dock { background: linear-gradient(to top, var(--app-bg) 76%, transparent); }
+:root.light .composer-shell { background: rgba(255,255,255,.96); border-color: rgba(63,47,92,.14); box-shadow: 0 16px 48px rgba(50,36,77,.12), inset 0 1px white; }
+:root.light .composer-shell:focus-within { border-color: #9b82e6; box-shadow: 0 18px 55px rgba(89,65,139,.15), 0 0 0 3px rgba(139,92,246,.08); }
+:root.light .composer-action { background: #21192f; }
+:root.light .composer-action:hover { background: #7557d6; }
+:root.light .composer-action:disabled { color: #aaa5b0; background: #efedf3; }
+:root.light .composer-action.stop { color: white; background: #21192f; }
+:root.light .attachment-button { color: #777180; }
+:root.light .attachment-button:hover { color: #5d3fb9; background: #f1edff; }
+:root.light .attachment-chip { color: #5c5566; background: #f4f1fa; border-color: #e2ddec; }
+:root.light .attachment-chip small { color: #918b99; }
+:root.light .user-message-card { color: #2e2440; background: #eee9ff; border-color: #ded3ff; box-shadow: 0 8px 24px rgba(72,52,117,.08); }
+:root.light .suggestion-square,
+:root.light .guest-suggestion { color: var(--text); background: rgba(255,255,255,.82); border-color: rgba(69,52,99,.12); box-shadow: 0 10px 30px rgba(54,40,80,.06); }
+:root.light .suggestion-square:hover,
+:root.light .guest-suggestion:hover { background: white; border-color: #bcaaf0; box-shadow: 0 16px 38px rgba(80,57,130,.11); }
+:root.light .suggestion-square > strong,
+:root.light .guest-suggestion > strong { color: #3b3346; }
+:root.light .suggestion-square > svg,
+:root.light .guest-suggestion > svg { color: #6849c3; }
+:root.light .suggestion-square > span,
+:root.light .guest-suggestion > span { color: #a29aaa; }
+:root.light .empty-orbit { border-color: rgba(117,87,214,.13); }
+:root.light .empty-orbit::before { border-color: rgba(55,42,78,.05); }
+:root.light .memory-saved-banner { color: #3d3150; background: rgba(255,255,255,.94); border-color: #d8ccf8; box-shadow: 0 18px 50px rgba(57,41,90,.15); }
+:root.light .memory-saved-banner strong { color: #6849c3; }
+:root.light .memory-saved-banner small { color: #81798a; }
+:root.light .memory-icon,
+:root.light .memory-pulse { color: #6849c3; background: #eee9ff; }
+:root.light .memory-card,
+:root.light .feature-tile,
+:root.light .plan-benefit,
+:root.light .important-card,
+:root.light .contact-card,
+:root.light .theme-card { background: #fbfaff; border-color: rgba(59,44,86,.11); }
+:root.light .theme-card:hover,
+:root.light .contact-card:hover { background: white; border-color: #cbbcf2; }
+:root.light .theme-card.active { background: #eee9ff; border-color: #9e83e8; }
+:root.light .theme-card strong,
+:root.light .feature-tile strong,
+:root.light .plan-benefit strong,
+:root.light .important-card strong,
+:root.light .contact-card strong { color: #332b3e; }
+:root.light .theme-card small,
+:root.light .feature-tile span,
+:root.light .plan-benefit p,
+:root.light .important-card p,
+:root.light .contact-card span { color: #777080; }
+:root.light .theme-swatch { border-color: rgba(53,40,78,.12); }
+:root.light .theme-swatch.light { color: #7557d6; background: white; box-shadow: inset 0 0 0 1px #eeeaf5; }
+:root.light .settings-tab { color: #716a79; }
+:root.light .settings-tab:hover { color: #342b40; background: #f1eef7; }
+:root.light .settings-tab.active { color: #6042ba; background: #eee9ff; }
+:root.light .settings-nav { border-color: var(--line); }
+:root.light .settings-row:hover { background: #f4f1f8; }
+:root.light .settings-row > svg { color: #827b8b; }
+:root.light .settings-row strong { color: #332b3e; }
+:root.light .settings-row small { color: #777080; }
+:root.light .plan-badge { color: #5d3fb9; background: #e9e2ff; border-color: #d2c3fb; }
+:root.light .lunamax-hero { background: radial-gradient(circle at 92% 0%, rgba(139,92,246,.18), transparent 38%), #f4f0ff; border-color: #d6caf8; }
+:root.light .lunamax-hero .text-lunar-200,
+:root.light .lunamax-hero .text-lunar-300 { color: #5d3fb9; }
+:root.light .lunamax-hero .text-zinc-400 { color: #716979; }
+:root.light .limit-panel { background: #f1ecff; border-color: #d3c6f6; box-shadow: 0 16px 40px rgba(55,40,84,.10); }
+:root.light .limit-panel strong { color: #332744; }
+:root.light .limit-panel p { color: #746c7e; }
+:root.light .response-recovery { color: #473720; background: #fff9e9; border-color: #eedca7; }
+:root.light .response-recovery > span { color: #9b6d12; background: #f8e9bd; }
+:root.light .markdown { color: #403947; }
+:root.light .markdown h1,
+:root.light .markdown h2,
+:root.light .markdown h3 { color: #211b2b; }
+:root.light .markdown a { color: #6545c1; }
+:root.light .markdown blockquote { color: #756d7c; }
+:root.light .markdown th { background: #f2eff8; border-color: #ded9e6; }
+:root.light .markdown td { border-color: #e4dfe9; }
+:root.light .markdown code:not(pre code) { color: #5c3ab6; background: #f0ebff; }
+:root.light .markdown hr { border-color: #e2dde7; }
+
 @media (max-width: 480px) {
-  .mission-header { @apply gap-2 px-3; }
-  .lunamax-button { @apply px-2.5; }
-  .lunamax-button span { max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mission-header { @apply h-14 gap-2 px-3; }
+  .lunamax-button { @apply h-8 px-2.5; }
+  .lunamax-button span { white-space: nowrap; }
+  .composer-dock { padding-bottom: env(safe-area-inset-bottom); }
+  .composer-shell { border-radius: 22px; }
+  .suggestion-square { min-height: 112px; padding: 14px; }
+  .suggestion-square > svg { margin-top: 14px; }
+  .markdown { font-size: 14.5px; line-height: 1.75; }
+  .memory-saved-banner { top: 64px; }
+  .chat-canvas::before { inset: 56px 0 0; opacity: .18; }
+  .response-recovery .btn-secondary { width: 100%; }
+  .composer-shell textarea { font-size: 16px; }
+  .modal-header { position: sticky; top: -20px; z-index: 5; margin-left: -4px; margin-right: -4px; padding: 20px 4px 12px; background: var(--panel); }
 }
 
 @keyframes memory-pulse {

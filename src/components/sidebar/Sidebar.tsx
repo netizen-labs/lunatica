@@ -100,7 +100,7 @@ export function Sidebar(props: SidebarProps) {
   return (
     <>
       <div className="relative hidden h-full lg:block">{content}</div>
-      {props.mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button type="button" className="absolute inset-0 bg-black/60" onClick={props.onMobileClose} aria-label="Fechar menu" /><div className="relative h-full w-[286px] animate-slide-in">{content}</div></div>}
+      {props.mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button type="button" className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={props.onMobileClose} aria-label="Fechar menu" /><div className="relative h-full w-[min(88vw,320px)] animate-slide-in [&_.main-sidebar]:!w-full">{content}</div></div>}
       <ConfirmDialog open={Boolean(deleteTarget)} title="Excluir conversa?" description="Essa ação não poderá ser desfeita." busy={busy} onCancel={() => setDeleteTarget(null)} onConfirm={() => void confirmDelete()} />
     </>
   )

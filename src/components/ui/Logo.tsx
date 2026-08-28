@@ -2,12 +2,13 @@ import { cn } from '../../lib/utils'
 
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 44 44" role="img" aria-label="Símbolo da Lunatica" className={cn('h-9 w-9 shrink-0', className)}>
-      <rect x="1" y="1" width="42" height="42" rx="14" fill="#111016" stroke="rgba(255,255,255,.12)" />
-      <path d="M27.7 10.5A13 13 0 1 0 34 31.9a11.6 11.6 0 1 1-6.3-21.4Z" fill="#a78bfa" />
-      <path d="M7.2 27.5c7.3 4.8 21.2 5.2 29.9-3.4" fill="none" stroke="#ddd6fe" strokeWidth="1.35" strokeLinecap="round" opacity=".72" />
-      <circle cx="34.7" cy="22.5" r="1.7" fill="#f5f3ff" />
-      <circle cx="29.7" cy="9.9" r="1" fill="#c4b5fd" />
+    <svg viewBox="0 0 48 48" role="img" aria-label="Símbolo da Lunatica" className={cn('logo-mark h-9 w-9 shrink-0', className)}>
+      <defs><linearGradient id="luna-core" x1="11" y1="8" x2="34" y2="37" gradientUnits="userSpaceOnUse"><stop stopColor="#a78bfa" /><stop offset="1" stopColor="#6d4acb" /></linearGradient></defs>
+      <rect className="logo-mark-bg" x="1" y="1" width="46" height="46" rx="15" />
+      <path className="logo-crescent" d="M28.3 9.8a14.7 14.7 0 1 0 8.9 24.8 13 13 0 1 1-8.9-24.8Z" fill="url(#luna-core)" />
+      <path className="logo-orbit" d="M7.5 36.5C15.2 25 28 15.8 41 12.8" fill="none" strokeWidth="1.6" strokeLinecap="round" />
+      <circle className="logo-star" cx="40.8" cy="12.9" r="2.1" />
+      <path className="logo-star" d="m35.4 27.5.9 2.2 2.2.9-2.2.9-.9 2.2-.9-2.2-2.2-.9 2.2-.9.9-2.2Z" />
     </svg>
   )
 }
@@ -19,7 +20,7 @@ export function Logo({ compact = false, className }: { compact?: boolean; classN
       {!compact && (
         <div className="leading-none">
           <span className="block text-[15px] font-semibold tracking-tight">Lunatica</span>
-          <span className="mt-1 block text-[10px] font-medium tracking-[.18em] text-zinc-500">MODELO 1.5</span>
+          <span className="mt-1 block text-[9px] font-semibold tracking-[.2em] text-zinc-500">INTELLIGENCE · 1.5</span>
         </div>
       )}
     </div>

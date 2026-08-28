@@ -220,6 +220,11 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
 
   const stopGeneration = useCallback(() => abortRef.current?.abort(), [])
 
+  const retryGeneration = useCallback(async () => {
+    if (!activeId || generating) return
+    await generate(activeId)
+  }, [activeId, generate, generating])
+
   const renameConversation = useCallback(async (id: string, title: string) => {
     const cleanTitle = title.replace(/\s+/g, ' ').trim().slice(0, 80)
     if (!cleanTitle) return
@@ -271,5 +276,5 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     await generate(message.conversation_id)
   }, [generate, generating, onAnalyzeMemory, removeStoredAttachments])
 
-  return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, renameConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage, refreshUsage }
+  return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, retryGeneration, renameConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage, refreshUsage }
 }

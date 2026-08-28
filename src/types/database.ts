@@ -6,9 +6,9 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; display_name: string; username: string | null; avatar_url: string | null; avatar_path: string | null; custom_instructions: string; onboarding_completed: boolean; theme: 'black' | 'dark'; created_at: string; updated_at: string }
-        Insert: { id: string; display_name?: string; username?: string | null; avatar_url?: string | null; avatar_path?: string | null; custom_instructions?: string; onboarding_completed?: boolean; theme?: 'black' | 'dark'; created_at?: string; updated_at?: string }
-        Update: { display_name?: string; username?: string | null; avatar_url?: string | null; avatar_path?: string | null; custom_instructions?: string; onboarding_completed?: boolean; theme?: 'black' | 'dark'; updated_at?: string }
+        Row: { id: string; display_name: string; username: string | null; avatar_url: string | null; avatar_path: string | null; custom_instructions: string; onboarding_completed: boolean; theme: 'light' | 'black' | 'dark'; created_at: string; updated_at: string }
+        Insert: { id: string; display_name?: string; username?: string | null; avatar_url?: string | null; avatar_path?: string | null; custom_instructions?: string; onboarding_completed?: boolean; theme?: 'light' | 'black' | 'dark'; created_at?: string; updated_at?: string }
+        Update: { display_name?: string; username?: string | null; avatar_url?: string | null; avatar_path?: string | null; custom_instructions?: string; onboarding_completed?: boolean; theme?: 'light' | 'black' | 'dark'; updated_at?: string }
         Relationships: []
       }
       conversations: {
