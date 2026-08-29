@@ -283,8 +283,10 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       insertedMessageId = userMessage.id
       const attachments = files.length ? await uploadFiles(conversationId, userMessage.id, files) : []
       setMessages((current) => [...current, { ...userMessage, attachments }])
-      if (!isTemporary) void onAnalyzeMemory?.(userMessage.id)
       await generate(conversationId)
+      // Memory classification starts after the answer so it never competes
+      // with the latency-sensitive Gemini stream.
+      if (!isTemporary) void onAnalyzeMemory?.(userMessage.id)
       return conversationId
     } catch (error) {
       if (!createdConversation && insertedMessageId) await supabase.from('messages').delete().eq('id', insertedMessageId)
@@ -388,8 +390,8 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     const { error: deleteError } = await supabase.from('messages').delete().eq('conversation_id', message.conversation_id).gt('created_at', message.created_at)
     if (deleteError) throw deleteError
     setMessages((current) => current.filter((item) => item.created_at <= message.created_at).map((item) => item.id === message.id ? { ...item, content } : item))
-    void onAnalyzeMemory?.(message.id)
     await generate(message.conversation_id)
+    void onAnalyzeMemory?.(message.id)
   }, [generate, generating, onAnalyzeMemory, removeStoredAttachments])
 
   return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, retryGeneration, renameConversation, togglePinConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage, refreshUsage }
