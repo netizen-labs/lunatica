@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { Logo } from './components/ui/Logo'
+import { LogoMark } from './components/ui/Logo'
 import { useAuth } from './contexts/AuthContext'
 import { useProfile } from './contexts/ProfileContext'
 import { useTheme } from './contexts/ThemeContext'
@@ -13,7 +13,7 @@ const GuestPage = lazy(() => import('./pages/GuestPage').then((module) => ({ def
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage').then((module) => ({ default: module.OnboardingPage })))
 
 function LoadingScreen() {
-  return <div className="app-shell flex min-h-screen items-center justify-center"><div className="animate-pulse"><Logo /></div></div>
+  return <div className="app-shell flex min-h-screen items-center justify-center"><div className="loading-emblem" role="status" aria-label="Carregando a Lunatica"><LogoMark className="!h-14 !w-14" /></div></div>
 }
 
 function PrivateArea({ conversation = false }: { conversation?: boolean }) {

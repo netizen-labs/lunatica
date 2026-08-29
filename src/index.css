@@ -67,6 +67,10 @@
   .logo-mark-bg { fill: #111016; stroke: rgba(255,255,255,.13); }
   .logo-orbit { stroke: #ddd6fe; opacity: .82; }
   .logo-star { fill: #faf8ff; }
+  .loading-emblem { @apply relative flex h-24 w-24 items-center justify-center rounded-full; }
+  .loading-emblem::before { content: ''; @apply absolute inset-1 rounded-full border border-lunar-400/15; }
+  .loading-emblem::after { content: ''; @apply absolute inset-1 rounded-full border border-transparent border-t-lunar-400/70; animation: loading-orbit 1.35s linear infinite; }
+  .loading-emblem .logo-mark { animation: loading-breathe 1.8s ease-in-out infinite; }
 
   .mission-header { @apply flex h-16 shrink-0 items-center gap-3 border-b px-4 backdrop-blur-md sm:px-6; border-color: var(--line); background: color-mix(in srgb, var(--app-bg) 88%, transparent); }
   .status-pill { @apply items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs text-zinc-400; background: rgba(255,255,255,.025); }
@@ -392,6 +396,20 @@
 @keyframes memory-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,.28); }
   50% { box-shadow: 0 0 0 7px rgba(139,92,246,0); }
+}
+
+@keyframes loading-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loading-breathe {
+  0%, 100% { transform: scale(.94); opacity: .78; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-emblem::after,
+  .loading-emblem .logo-mark { animation: none; }
 }
 
 .markdown { @apply text-[15px] leading-7 text-zinc-300; }
