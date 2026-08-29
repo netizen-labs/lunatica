@@ -74,7 +74,7 @@ export class GeminiError extends Error {
   }
 }
 
-export async function streamResponse(messages: HistoryMessage[], signal: AbortSignal, options: StreamResponseOptions = {}) {
+export async function streamResponse(messages: HistoryMessage[], options: StreamResponseOptions = {}) {
   const apiKey = Deno.env.get('GEMINI_API_KEY')
   const model = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash'
   if (!apiKey) throw new GeminiError(500, 'Gemini não configurado')
@@ -95,10 +95,12 @@ export async function streamResponse(messages: HistoryMessage[], signal: AbortSi
         ...(options.lunaMax ? { tools: [{ googleSearch: {} }] } : {}),
         generationConfig: {
           maxOutputTokens: options.lunaMax ? 6144 : 3072,
-          thinkingConfig: { thinkingBudget: options.lunaMax ? 2048 : 1024 },
+          // Free answers start immediately. LunaMax keeps a compact reasoning
+          // budget for harder prompts without delaying the first token too much.
+          thinkingConfig: { thinkingBudget: options.lunaMax ? 512 : 0 },
         },
       }),
-        signal: AbortSignal.any([signal, AbortSignal.timeout(75_000)]),
+        signal: AbortSignal.timeout(75_000),
       },
     )
   } catch (error) {
@@ -114,4 +116,70 @@ export async function streamResponse(messages: HistoryMessage[], signal: AbortSi
   }
   if (!response.body) throw new GeminiError(502, 'Gemini retornou uma resposta vazia')
   return response.body
+}
+
+interface GroundingSource {
+  title: string
+  uri: string
+}
+
+function parseGeminiEvent(payload: string): { text: string; sources: GroundingSource[] } {
+  try {
+    const parsed = JSON.parse(payload) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string; thought?: boolean }> }
+        groundingMetadata?: { groundingChunks?: Array<{ web?: { title?: string; uri?: string } }> }
+      }>
+    }
+    const candidate = parsed.candidates?.[0]
+    const text = candidate?.content?.parts?.filter((part) => part.thought !== true).map((part) => part.text ?? '').join('') ?? ''
+    const sources = (candidate?.groundingMetadata?.groundingChunks ?? []).flatMap((chunk): GroundingSource[] => {
+      const uri = chunk.web?.uri?.trim()
+      if (!uri || !/^https:\/\//i.test(uri)) return []
+      return [{ title: chunk.web?.title?.trim() || new URL(uri).hostname, uri }]
+    })
+    return { text, sources }
+  } catch {
+    return { text: '', sources: [] }
+  }
+}
+
+export async function collectGeminiStream(stream: ReadableStream<Uint8Array>, shouldCancel: () => Promise<boolean>) {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  const sources = new Map<string, string>()
+  let buffer = ''
+  let content = ''
+
+  const consume = (event: string) => {
+    for (const line of event.split('\n')) {
+      if (!line.startsWith('data:')) continue
+      const payload = line.slice(5).trim()
+      if (!payload || payload === '[DONE]') continue
+      const next = parseGeminiEvent(payload)
+      content += next.text
+      for (const source of next.sources) sources.set(source.uri, source.title)
+    }
+  }
+
+  while (true) {
+    if (await shouldCancel()) {
+      await reader.cancel('cancelled by user')
+      return { content: '', cancelled: true }
+    }
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+    const events = buffer.split('\n\n')
+    buffer = events.pop() ?? ''
+    for (const event of events) consume(event)
+  }
+  buffer += decoder.decode()
+  if (buffer.trim()) consume(buffer)
+
+  if (sources.size) {
+    const markdown = [...sources.entries()].slice(0, 8).map(([uri, title]) => `- [${title.replace(/[[\]]/g, '')}](${uri})`).join('\n')
+    content += `\n\n### Fontes\n${markdown}`
+  }
+  return { content, cancelled: false }
 }

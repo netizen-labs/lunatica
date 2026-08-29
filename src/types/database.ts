@@ -23,6 +23,12 @@ export interface Database {
         Update: { content?: string }
         Relationships: []
       }
+      chat_generations: {
+        Row: { id: string; conversation_id: string; user_id: string; user_message_id: string; status: 'generating' | 'completed' | 'failed' | 'cancelled'; cancel_requested: boolean; assistant_message_id: string | null; error_code: string | null; created_at: string; updated_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       rate_limits: {
         Row: { id: number; user_id: string; created_at: string }
         Insert: { id?: number; user_id: string; created_at?: string }
@@ -64,6 +70,7 @@ export interface Database {
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Conversation = Database['public']['Tables']['conversations']['Row']
 export type Message = Database['public']['Tables']['messages']['Row']
+export type ChatGeneration = Database['public']['Tables']['chat_generations']['Row']
 export type MessageAttachment = Database['public']['Tables']['message_attachments']['Row']
 export type Memory = Database['public']['Tables']['memories']['Row']
 export type UserPlan = Database['public']['Tables']['user_plans']['Row']

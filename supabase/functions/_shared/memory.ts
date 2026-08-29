@@ -33,6 +33,7 @@ ${content.slice(0, 4000)}`
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         maxOutputTokens: 512,
+        thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: 'application/json',
         responseSchema: {
               type: 'object',

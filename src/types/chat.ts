@@ -8,6 +8,7 @@ export interface ChatMessageInput {
 
 export interface ChatRequest {
   conversationId: string
+  generationId: string
 }
 
 export interface ChatResponse {

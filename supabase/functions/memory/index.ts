@@ -4,8 +4,6 @@ import { summarizeMemories } from '../_shared/memory.ts'
 
 const MAX_MEMORIES = 50
 const MAX_REQUESTS_PER_MINUTE = 20
-const PERSONAL_FACT_PATTERN = /\b(meu nome (?:é|e)|me chamo|pode me chamar|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|estudante|designer|professor|professora)|estudo|estou estudando|estou aprendendo|trabalho|moro em|vivo em|prefiro|gosto de|adoro|não gosto|meu objetivo|quero aprender|quero criar|estou criando|estou desenvolvendo|meu projeto|minha ideia|my name is|i am|i study|i work|i live|my project|my goal)\b/i
-
 interface Clients { admin: SupabaseClient; userClient: SupabaseClient; user: User }
 
 function json(body: Record<string, unknown>, status = 200) {
@@ -57,7 +55,6 @@ Deno.serve(async (request) => {
       if (error || !message) return json({ error: 'Mensagem não encontrada' }, 404)
       content = message.content
       sourceMessageId = message.id
-      if (!PERSONAL_FACT_PATTERN.test(content)) return json({ created: [] })
     }
 
     const { count: memoryCount, error: countError } = await userClient.from('memories').select('id', { count: 'exact', head: true })

@@ -1,11 +1,14 @@
 import { createClient, type SupabaseClient, type User } from 'npm:@supabase/supabase-js@2.112.4'
 import { corsHeaders } from '../_shared/cors.ts'
-import { GeminiError, streamResponse, type GeminiAttachment, type HistoryMessage } from '../_shared/gemini.ts'
+import { collectGeminiStream, GeminiError, streamResponse, type GeminiAttachment, type HistoryMessage } from '../_shared/gemini.ts'
+
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void }
 
 const MAX_REQUESTS_PER_MINUTE = 20
 const LUNAMAX_REQUESTS_PER_MINUTE = 60
 const FREE_DAILY_CREDIT_LIMIT = 30
-const HISTORY_LIMIT = 40
+const HISTORY_LIMIT = 32
+const LUNAMAX_HISTORY_LIMIT = 60
 const MAX_ATTACHMENTS = 3
 const MAX_INLINE_BYTES = 12 * 1024 * 1024
 
@@ -108,19 +111,75 @@ function bytesToBase64(bytes: Uint8Array) {
 }
 
 async function downloadAttachments(admin: SupabaseClient, rows: AttachmentRow[]): Promise<GeminiAttachment[]> {
-  const files: GeminiAttachment[] = []
-  for (const row of rows) {
+  return Promise.all(rows.map(async (row) => {
     const { data, error } = await admin.storage.from('attachments').download(row.storage_path)
     if (error || !data) throw new Error('Falha ao ler um anexo')
     const bytes = new Uint8Array(await data.arrayBuffer())
     const isText = row.mime_type.startsWith('text/') || row.mime_type === 'application/json'
-    files.push({
+    return {
       fileName: row.file_name,
       mimeType: row.mime_type,
       data: isText ? new TextDecoder().decode(bytes).slice(0, 80_000) : bytesToBase64(bytes),
-    })
+    }
+  }))
+}
+
+interface PersistGenerationOptions {
+  admin: SupabaseClient
+  generationId: string
+  conversationId: string
+  userId: string
+  stream: ReadableStream<Uint8Array>
+  cost: number
+  attachmentCount: number
+  lunaMax: boolean
+}
+
+async function persistGeneration({ admin, generationId, conversationId, userId, stream, cost, attachmentCount, lunaMax }: PersistGenerationOptions) {
+  let lastCancellationCheck = 0
+  const cancellationRequested = async (force = false) => {
+    if (!force && Date.now() - lastCancellationCheck < 600) return false
+    lastCancellationCheck = Date.now()
+    const { data, error } = await admin.from('chat_generations').select('cancel_requested, status').eq('id', generationId).eq('user_id', userId).maybeSingle()
+    if (error) throw error
+    return data?.cancel_requested === true || data?.status === 'cancelled'
   }
-  return files
+
+  try {
+    const result = await collectGeminiStream(stream, () => cancellationRequested())
+    if (result.cancelled || await cancellationRequested(true)) {
+      await admin.from('chat_generations').update({ status: 'cancelled', cancel_requested: true, error_code: null }).eq('id', generationId).eq('user_id', userId)
+      return
+    }
+    const content = result.content.trim()
+    if (!content) {
+      await admin.from('chat_generations').update({ status: 'failed', error_code: 'EMPTY_RESPONSE' }).eq('id', generationId).eq('user_id', userId)
+      return
+    }
+
+    const { data: assistant, error: messageError } = await admin.from('messages').insert({
+      conversation_id: conversationId,
+      user_id: userId,
+      role: 'assistant',
+      content,
+    }).select('id').single()
+    if (messageError) throw messageError
+
+    const { error: generationError } = await admin.from('chat_generations').update({
+      status: 'completed',
+      assistant_message_id: assistant.id,
+      error_code: null,
+    }).eq('id', generationId).eq('user_id', userId)
+    if (generationError) throw generationError
+
+    if (!lunaMax) {
+      const { error: usageError } = await admin.from('usage_events').insert({ user_id: userId, cost, attachment_count: attachmentCount })
+      if (usageError) console.error('Usage persistence failed', usageError.message)
+    }
+  } catch (error) {
+    console.error('Generation persistence failed', error instanceof Error ? error.message : 'unknown')
+    await admin.from('chat_generations').update({ status: 'failed', error_code: 'PERSISTENCE_FAILED' }).eq('id', generationId).eq('user_id', userId).eq('status', 'generating')
+  }
 }
 
 Deno.serve(async (request) => {
@@ -136,10 +195,17 @@ Deno.serve(async (request) => {
 
     if (request.method === 'GET') return jsonResponse(await usageStatus(admin, user.id, lunaMax))
 
-    const body = await request.json().catch(() => null) as { conversationId?: unknown } | null
+    const body = await request.json().catch(() => null) as { action?: unknown; conversationId?: unknown; generationId?: unknown } | null
+    if (body?.action === 'cancel') {
+      if (typeof body.generationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.generationId)) return jsonResponse({ error: 'Geração inválida' }, 400)
+      const { data, error } = await admin.from('chat_generations').update({ cancel_requested: true }).eq('id', body.generationId).eq('user_id', user.id).eq('status', 'generating').select('id').maybeSingle()
+      if (error) throw error
+      return jsonResponse({ cancelled: Boolean(data) })
+    }
     if (!body || typeof body.conversationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.conversationId)) {
       return jsonResponse({ error: 'Conversa inválida' }, 400)
     }
+    if (typeof body.generationId !== 'string' || !/^[0-9a-f-]{36}$/i.test(body.generationId)) return jsonResponse({ error: 'Geração inválida' }, 400)
 
     const { data: conversation, error: conversationError } = await userClient.from('conversations').select('id, is_temporary, expires_at').eq('id', body.conversationId).single()
     if (conversationError || !conversation) return jsonResponse({ error: 'Conversa não encontrada' }, 404)
@@ -152,9 +218,13 @@ Deno.serve(async (request) => {
     if (countError) throw countError
     if ((count ?? 0) >= (lunaMax ? LUNAMAX_REQUESTS_PER_MINUTE : MAX_REQUESTS_PER_MINUTE)) return jsonResponse({ error: 'Muitas solicitações. Aguarde um minuto.' }, 429)
 
-    const { data: history, error: historyError } = await userClient.from('messages').select('id, role, content, created_at').eq('conversation_id', body.conversationId).order('created_at', { ascending: false }).limit(lunaMax ? 120 : HISTORY_LIMIT)
+    const { data: history, error: historyError } = await userClient.from('messages').select('id, role, content, created_at').eq('conversation_id', body.conversationId).order('created_at', { ascending: false }).limit(lunaMax ? LUNAMAX_HISTORY_LIMIT : HISTORY_LIMIT)
     if (historyError) throw historyError
     if (!history?.length || history[0].role !== 'user') return jsonResponse({ error: 'A conversa precisa terminar com uma mensagem do usuário' }, 400)
+
+    const { data: ongoing, error: ongoingError } = await admin.from('chat_generations').select('id').eq('user_message_id', history[0].id).eq('user_id', user.id).eq('status', 'generating').maybeSingle()
+    if (ongoingError) throw ongoingError
+    if (ongoing) return jsonResponse({ error: 'A Lunatica já está respondendo esta mensagem.', code: 'GENERATION_IN_PROGRESS' }, 409)
 
     const { data: attachmentRows, error: attachmentError } = await userClient.from('message_attachments').select('storage_path, file_name, mime_type, size_bytes').eq('message_id', history[0].id).order('created_at', { ascending: true })
     if (attachmentError) throw attachmentError
@@ -182,28 +252,55 @@ Deno.serve(async (request) => {
     const { error: rateError } = await admin.from('rate_limits').insert({ user_id: user.id })
     if (rateError) throw rateError
 
-    const { data: profile, error: profileError } = await admin.from('profiles').select('custom_instructions').eq('id', user.id).single()
+    const [profileResult, memoryResult, files] = await Promise.all([
+      admin.from('profiles').select('custom_instructions').eq('id', user.id).single(),
+      conversation.is_temporary
+        ? Promise.resolve({ data: [] as Array<{ summary: string }>, error: null })
+        : userClient.from('memories').select('summary').order('updated_at', { ascending: false }).limit(20),
+      downloadAttachments(admin, attachments),
+    ])
+    const { data: profile, error: profileError } = profileResult
     if (profileError) throw profileError
-    let memoryRows: Array<{ summary: string }> = []
-    if (!conversation.is_temporary) {
-      const { data, error: memoryError } = await userClient.from('memories').select('summary').order('updated_at', { ascending: false }).limit(20)
-      if (memoryError) throw memoryError
-      memoryRows = data ?? []
-    }
-    const files = await downloadAttachments(admin, attachments)
+    if (memoryResult.error) throw memoryResult.error
+    const memoryRows = memoryResult.data ?? []
     const messages = [...history].reverse().map(({ role, content }) => ({ role, content })) as HistoryMessage[]
-    const stream = await streamResponse(messages, request.signal, { customInstructions: profile.custom_instructions, attachments: files, memories: (memoryRows ?? []).map((row) => row.summary), lunaMax })
-    if (!lunaMax) {
-      const { error: usageError } = await admin.from('usage_events').insert({ user_id: user.id, cost, attachment_count: attachments.length })
-      if (usageError) throw usageError
+
+    const { error: generationError } = await admin.from('chat_generations').insert({
+      id: body.generationId,
+      conversation_id: body.conversationId,
+      user_id: user.id,
+      user_message_id: history[0].id,
+    })
+    if (generationError) throw generationError
+
+    let stream: ReadableStream<Uint8Array>
+    try {
+      stream = await streamResponse(messages, { customInstructions: profile.custom_instructions, attachments: files, memories: memoryRows.map((row) => row.summary), lunaMax })
+    } catch (error) {
+      await admin.from('chat_generations').update({ status: 'failed', error_code: error instanceof GeminiError && error.status === 429 ? 'RATE_LIMITED' : 'UPSTREAM_FAILED' }).eq('id', body.generationId).eq('user_id', user.id)
+      throw error
     }
-    return new Response(stream, {
+
+    const [clientStream, persistenceStream] = stream.tee()
+    EdgeRuntime.waitUntil(persistGeneration({
+      admin,
+      generationId: body.generationId,
+      conversationId: body.conversationId,
+      userId: user.id,
+      stream: persistenceStream,
+      cost,
+      attachmentCount: attachments.length,
+      lunaMax,
+    }))
+
+    return new Response(clientStream, {
       status: 200,
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',
         'X-Accel-Buffering': 'no',
+        'X-Generation-Id': body.generationId,
       },
     })
   } catch (error) {

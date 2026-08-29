@@ -4,6 +4,7 @@ import { supabaseProjectUrl, supabasePublicKey } from './supabase'
 
 interface StreamChatOptions {
   conversationId: string
+  generationId: string
   session: Session
   signal: AbortSignal
   onText: (text: string) => void
@@ -18,12 +19,12 @@ function contentFromGeminiEvent(payload: string): { text: string; sources: Groun
   try {
     const parsed = JSON.parse(payload) as {
       candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> }
+        content?: { parts?: Array<{ text?: string; thought?: boolean }> }
         groundingMetadata?: { groundingChunks?: Array<{ web?: { title?: string; uri?: string } }> }
       }>
     }
     const candidate = parsed.candidates?.[0]
-    const text = candidate?.content?.parts?.map((part) => part.text ?? '').join('') ?? ''
+    const text = candidate?.content?.parts?.filter((part) => part.thought !== true).map((part) => part.text ?? '').join('') ?? ''
     const sources = (candidate?.groundingMetadata?.groundingChunks ?? []).flatMap((chunk): GroundingSource[] => {
       const uri = chunk.web?.uri?.trim()
       if (!uri || !/^https:\/\//i.test(uri)) return []
@@ -35,10 +36,10 @@ function contentFromGeminiEvent(payload: string): { text: string; sources: Groun
   }
 }
 
-export async function streamChatResponse({ conversationId, session, signal, onText }: StreamChatOptions) {
+export async function streamChatResponse({ conversationId, generationId, session, signal, onText }: StreamChatOptions) {
   if (!supabaseProjectUrl) throw new Error('Supabase não configurado')
 
-  const payload: ChatRequest = { conversationId }
+  const payload: ChatRequest = { conversationId, generationId }
   const response = await fetch(`${supabaseProjectUrl}/functions/v1/chat`, {
     method: 'POST',
     headers: {
@@ -94,6 +95,23 @@ export async function streamChatResponse({ conversationId, session, signal, onTe
   if (groundingSources.size) {
     const sources = [...groundingSources.entries()].slice(0, 8).map(([uri, title]) => `- [${title.replace(/[[\]]/g, '')}](${uri})`).join('\n')
     onText(`\n\n### Fontes\n${sources}`)
+  }
+}
+
+export async function cancelChatGeneration(session: Session, generationId: string) {
+  if (!supabaseProjectUrl) throw new Error('Supabase não configurado')
+  const response = await fetch(`${supabaseProjectUrl}/functions/v1/chat`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: supabasePublicKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ action: 'cancel', generationId }),
+  })
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new Error(`${response.status}: ${body.error || 'Não foi possível interromper a resposta'}`)
   }
 }
 
