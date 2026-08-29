@@ -113,7 +113,7 @@ export function ChatPage() {
       <main className="relative flex min-w-0 flex-1 flex-col">
         <header className="mission-header">
           <MobileMenuButton onClick={() => setMobileOpen(true)} />
-          <button type="button" className={`lunamax-button ${plan.isLunaMax ? 'active' : ''}`} onClick={() => openSettings('plan')}><Sparkles className="h-3.5 w-3.5" /><span>{plan.isLunaMax ? 'LunaMax ativo' : <><span className="hidden min-[420px]:inline">Comprar </span>LunaMax</>}</span></button>
+          <button type="button" className={`lunamax-button ${plan.isLunaMax ? 'active' : ''}`} onClick={() => openSettings('plan')}><Sparkles className="h-3.5 w-3.5" /><span>{plan.isLunaMax ? 'LunaMax ativo' : 'Adquirir LunaMax'}</span></button>
           <div className="min-w-0 flex-1" />
           {chat.usage && <span className="status-pill hidden md:flex"><Coins className="h-3.5 w-3.5" /> {chat.usage.unlimited ? 'Ilimitado' : `${chat.usage.remaining} créditos`}</span>}
           {!online && <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-300"><WifiOff className="h-3.5 w-3.5" /> Offline</span>}
