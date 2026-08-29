@@ -6,15 +6,21 @@ import type { UserPlan } from '../types/database'
 
 export function usePlan(session: Session) {
   const [plan, setPlan] = useState<UserPlan | null>(null)
+  const [expiredPlan, setExpiredPlan] = useState<UserPlan | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const applyPlan = useCallback((data: UserPlan | null) => {
+    const isActive = data?.status === 'active' && new Date(data.expires_at).getTime() > Date.now()
+    setPlan(isActive ? data : null)
+    setExpiredPlan(data && !isActive ? data : null)
+    return isActive ? data : null
+  }, [])
 
   const refresh = useCallback(async () => {
     const { data, error } = await supabase.from('user_plans').select('*').maybeSingle()
     if (error) throw error
-    const active = data?.status === 'active' && new Date(data.expires_at).getTime() > Date.now() ? data : null
-    setPlan(active)
-    return active
-  }, [])
+    return applyPlan(data)
+  }, [applyPlan])
 
   useEffect(() => {
     let active = true
@@ -23,17 +29,24 @@ export function usePlan(session: Session) {
       if (error) {
         if (import.meta.env.DEV) console.error('Falha ao carregar plano', error)
       } else {
-        setPlan(data?.status === 'active' && new Date(data.expires_at).getTime() > Date.now() ? data : null)
+        applyPlan(data)
       }
       setLoading(false)
     })
     return () => { active = false }
-  }, [])
+  }, [applyPlan])
+
+  useEffect(() => {
+    if (!plan) return
+    const remaining = new Date(plan.expires_at).getTime() - Date.now()
+    const timer = window.setTimeout(() => applyPlan(plan), Math.max(0, Math.min(remaining + 500, 2_147_000_000)))
+    return () => window.clearTimeout(timer)
+  }, [applyPlan, plan])
 
   const redeem = useCallback(async (code: string, acceptedDisclaimer: boolean) => {
     await redeemLunaMax(session, code, acceptedDisclaimer)
     return refresh()
   }, [refresh, session])
 
-  return { plan, loading, isLunaMax: Boolean(plan), refresh, redeem }
+  return { plan, expiredPlan, loading, isLunaMax: Boolean(plan), refresh, redeem }
 }

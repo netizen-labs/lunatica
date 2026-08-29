@@ -96,9 +96,41 @@
   .composer-action { @apply mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lunar-500 text-white transition hover:bg-lunar-400 disabled:bg-white/[0.07] disabled:text-zinc-600; }
   .composer-action.stop { @apply bg-white text-zinc-950 hover:bg-zinc-200; }
   .attachment-button { @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl px-2.5 text-xs text-zinc-500 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-35; }
+  .voice-button { @apply mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-35; }
+  .voice-button.listening { @apply bg-red-500/10 text-red-400; animation: memory-pulse 1.4s ease-in-out infinite; }
   .attachment-chip { @apply inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.045] px-2 py-1.5 text-[11px] text-zinc-300; }
   .attachment-chip small { @apply text-[9px] text-zinc-600; }
   .attachment-chip button { @apply ml-0.5 rounded p-0.5 text-zinc-500 hover:bg-white/10 hover:text-white; }
+  .attachment-preview-list { @apply flex gap-2 overflow-x-auto border-b border-white/10 px-3 pb-3 pt-3; }
+  .attachment-preview-card { @apply flex min-w-[220px] max-w-[280px] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] p-2; }
+  .attachment-preview-card img { @apply h-14 w-14 shrink-0 rounded-lg object-cover; }
+  .attachment-preview-card strong { @apply block truncate text-xs font-medium; }
+  .attachment-preview-card small { @apply mt-1 block text-[10px] text-zinc-500; }
+  .attachment-preview-card > button { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-white/[0.08] hover:text-white; }
+  .attachment-file-icon { @apply flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-lunar-500/10 text-lunar-300; }
+  .message-attachment-grid { @apply mt-3 grid grid-cols-1 gap-2 border-t border-white/10 pt-3 sm:grid-cols-2; }
+  .message-image-preview { @apply relative block min-h-28 overflow-hidden rounded-xl border border-white/10 bg-black/10; }
+  .message-image-preview img { @apply h-full max-h-72 w-full object-cover transition duration-300 hover:scale-[1.02]; }
+  .message-image-preview span { @apply absolute inset-x-0 bottom-0 truncate bg-black/60 px-2 py-1.5 text-[10px] text-white backdrop-blur; }
+
+  .chat-actions-tab { @apply relative flex shrink-0 items-center rounded-xl border p-0.5; background: var(--panel-elevated); box-shadow: 0 8px 26px rgba(0,0,0,.16); }
+  .chat-actions-button { @apply inline-flex h-8 w-9 items-center justify-center rounded-[9px] text-zinc-500 transition hover:bg-white/[0.07] hover:text-white; }
+  .chat-actions-divider { @apply h-4 w-px bg-white/10; }
+  .chat-actions-menu { @apply absolute right-0 top-[calc(100%+10px)] z-50 w-[min(292px,calc(100vw-24px))] rounded-2xl border p-2; color: var(--text); background: var(--panel-elevated); box-shadow: var(--shadow); }
+  .chat-action-row { @apply flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-zinc-400 transition hover:bg-white/[0.055] hover:text-white disabled:opacity-50; }
+  .chat-action-row > svg { @apply shrink-0; }
+  .chat-action-row > span { @apply min-w-0 flex-1; }
+  .chat-action-row strong { @apply block text-xs font-medium; }
+  .chat-action-row small { @apply mt-1 block text-[10px] leading-4 text-zinc-500; }
+  .chat-action-row.active { @apply bg-lunar-500/10 text-lunar-300; }
+  .chat-action-row.danger { @apply text-red-400 hover:bg-red-500/[0.08] hover:text-red-300; }
+  .temporary-menu-note { @apply mb-1 flex items-start gap-3 rounded-xl bg-lunar-500/[0.07] px-3 py-3 text-lunar-300; }
+  .temporary-menu-note span { @apply min-w-0; }
+  .temporary-menu-note strong { @apply block text-xs; }
+  .temporary-menu-note small { @apply mt-1 block text-[10px] leading-4 text-zinc-500; }
+  .header-rename-form { @apply flex items-center gap-1 p-1; }
+  .header-rename-form input { @apply min-w-0 flex-1 rounded-lg border bg-transparent px-2.5 py-2 text-xs outline-none focus:border-lunar-400; }
+  .header-rename-form button { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-white/[0.06] hover:text-white disabled:opacity-40; }
 
   .user-message-card { @apply rounded-2xl rounded-br-md border border-lunar-400/10 bg-lunar-500/[0.12] px-4 py-3 text-[15px] leading-6 text-zinc-100; box-shadow: inset 0 1px rgba(255,255,255,.025); }
   .assistant-mark { @apply mt-1 h-8 w-8 shrink-0; filter: drop-shadow(0 0 10px rgba(139,92,246,.14)); }
@@ -109,7 +141,6 @@
   .suggestion-square > strong { @apply mt-auto text-xs font-medium leading-5 text-zinc-300; }
   .empty-orbit { @apply pointer-events-none absolute h-[340px] w-[340px] rounded-full border border-lunar-400/[0.07] sm:h-[500px] sm:w-[500px]; transform: rotate(-17deg); }
   .empty-orbit::before { content: ''; @apply absolute inset-9 rounded-full border border-white/[0.025]; }
-  .empty-orbit > span { @apply absolute left-12 top-12 h-1.5 w-1.5 rounded-full bg-lunar-300; box-shadow: 0 0 20px rgba(196,181,253,.8); }
 
   .memory-saved-banner { @apply absolute left-1/2 top-[72px] z-30 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-lunar-400/25 bg-[#17131f] px-4 py-3 text-left shadow-2xl transition hover:-translate-y-0.5; min-width: min(330px, calc(100vw - 32px)); }
   .memory-saved-banner { background: rgba(23,19,31,.88); backdrop-filter: blur(14px); }
@@ -177,6 +208,13 @@
   .response-recovery > div { @apply min-w-0 flex-1; }
   .response-recovery strong { @apply text-sm; }
   .response-recovery p { @apply mt-1 text-xs leading-5 text-[var(--muted)]; }
+  .plan-expired-banner { @apply mx-auto mt-3 flex w-[calc(100%_-_1.5rem)] max-w-4xl shrink-0 items-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.07] p-3 sm:w-[calc(100%_-_3rem)]; }
+  .plan-expired-banner > span { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300; }
+  .plan-expired-banner > div { @apply min-w-0 flex-1; }
+  .plan-expired-banner strong { @apply block text-sm; }
+  .plan-expired-banner p { @apply mt-1 text-[11px] leading-5 text-[var(--muted)]; }
+  .plan-expired-card { @apply flex items-start gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/[0.07] p-4 text-amber-200; }
+  .plan-expired-card p { @apply mt-1 text-xs leading-5 text-zinc-500; }
 }
 
 /* Light mode is intentionally more editorial than a simple color inversion. */
@@ -235,8 +273,32 @@
 :root.light .composer-action.stop { color: white; background: #21192f; }
 :root.light .attachment-button { color: #777180; }
 :root.light .attachment-button:hover { color: #5d3fb9; background: #f1edff; }
+:root.light .voice-button { color: #777180; }
+:root.light .voice-button:hover { color: #5d3fb9; background: #f1edff; }
+:root.light .voice-button.listening { color: #bd2d4b; background: #fff0f3; }
 :root.light .attachment-chip { color: #5c5566; background: #f4f1fa; border-color: #e2ddec; }
 :root.light .attachment-chip small { color: #918b99; }
+:root.light .attachment-preview-list { border-color: var(--line); }
+:root.light .attachment-preview-card { background: #f8f6fc; border-color: #e1dbea; }
+:root.light .attachment-preview-card small { color: #81798a; }
+:root.light .attachment-preview-card > button { color: #777180; }
+:root.light .attachment-preview-card > button:hover { color: #392f45; background: #ece8f3; }
+:root.light .attachment-file-icon { color: #6849c3; background: #eee9ff; }
+:root.light .message-attachment-grid { border-color: #ded3ff; }
+:root.light .message-image-preview { border-color: #d8cdf7; background: #e9e2fb; }
+:root.light .chat-actions-tab { background: white; border-color: #ddd6e8; box-shadow: 0 7px 22px rgba(57,41,90,.09); }
+:root.light .chat-actions-button { color: #716a79; }
+:root.light .chat-actions-button:hover { color: #5d3fb9; background: #f1edff; }
+:root.light .chat-actions-divider { background: #e4dfeb; }
+:root.light .chat-actions-menu { background: white; border-color: #ded7e8; }
+:root.light .chat-action-row { color: #4e4659; }
+:root.light .chat-action-row:hover { color: #302839; background: #f4f1f8; }
+:root.light .chat-action-row small,
+:root.light .temporary-menu-note small { color: #797181; }
+:root.light .chat-action-row.active,
+:root.light .temporary-menu-note { color: #6042ba; background: #eee9ff; }
+:root.light .header-rename-form button { color: #716a79; }
+:root.light .header-rename-form button:hover { color: #5d3fb9; background: #f1edff; }
 :root.light .user-message-card { color: #2e2440; background: #eee9ff; border-color: #ded3ff; box-shadow: 0 8px 24px rgba(72,52,117,.08); }
 :root.light .suggestion-square,
 :root.light .guest-suggestion { color: var(--text); background: rgba(255,255,255,.82); border-color: rgba(69,52,99,.12); box-shadow: 0 10px 30px rgba(54,40,80,.06); }
@@ -294,6 +356,10 @@
 :root.light .limit-panel p { color: #746c7e; }
 :root.light .response-recovery { color: #473720; background: #fff9e9; border-color: #eedca7; }
 :root.light .response-recovery > span { color: #9b6d12; background: #f8e9bd; }
+:root.light .plan-expired-banner,
+:root.light .plan-expired-card { color: #5b431e; background: #fff8e7; border-color: #ead69c; }
+:root.light .plan-expired-banner > span { color: #9b6d12; background: #f8e9bd; }
+:root.light .plan-expired-card p { color: #796d5a; }
 :root.light .markdown { color: #403947; }
 :root.light .markdown h1,
 :root.light .markdown h2,
@@ -317,6 +383,8 @@
   .memory-saved-banner { top: 64px; }
   .chat-canvas::before { inset: 56px 0 0; opacity: .18; }
   .response-recovery .btn-secondary { width: 100%; }
+  .plan-expired-banner { @apply flex-wrap; }
+  .plan-expired-banner .btn-primary { margin-left: 48px; flex: 1; }
   .composer-shell textarea { font-size: 16px; }
   .modal-header { position: sticky; top: -20px; z-index: 5; margin-left: -4px; margin-right: -4px; padding: 20px 4px 12px; background: var(--panel); }
 }

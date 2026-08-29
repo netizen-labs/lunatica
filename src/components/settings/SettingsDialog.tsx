@@ -19,6 +19,7 @@ interface SettingsDialogProps {
   initialTab?: SettingsTab
   usage?: UsageStatus | null
   plan: UserPlan | null
+  expiredPlan?: UserPlan | null
   memories: Memory[]
   memoryLoading: boolean
   onClose: () => void
@@ -40,7 +41,7 @@ function formatCode(value: string) {
   return normalized.match(/.{1,4}/g)?.join(' ') ?? ''
 }
 
-export function SettingsDialog({ open, initialTab = 'general', usage, plan, memories, memoryLoading, onClose, onClearHistory, onAddMemory, onDeleteMemory, onRedeemPlan }: SettingsDialogProps) {
+export function SettingsDialog({ open, initialTab = 'general', usage, plan, expiredPlan, memories, memoryLoading, onClose, onClearHistory, onAddMemory, onDeleteMemory, onRedeemPlan }: SettingsDialogProps) {
   const { user, signOut } = useAuth()
   const { profile, saveProfile } = useProfile()
   const { theme, setTheme } = useTheme()
@@ -89,7 +90,7 @@ export function SettingsDialog({ open, initialTab = 'general', usage, plan, memo
           <div className="min-w-0">
             {tab === 'general' && <div>
               <section><h3 className="text-sm font-semibold">Aparência</h3><p className="mt-1 text-xs leading-5 text-zinc-500">Escolha a atmosfera visual da interface.</p><div className="mt-4 grid gap-3 sm:grid-cols-3">{([{ value: 'light', label: 'Claro lunar', note: 'Branco suave e legível.', icon: Sun }, { value: 'dark', label: 'Escuro grafite', note: 'Carvão confortável.', icon: Moon }, { value: 'black', label: 'Preto eclipse', note: 'Contraste máximo.', icon: Moon }] as const).map((option) => <button key={option.value} type="button" onClick={() => void selectTheme(option.value as Theme)} className={`theme-card ${theme === option.value ? 'active' : ''}`}><span className={`theme-swatch ${option.value}`}><option.icon className="h-4 w-4" /></span><span><strong>{option.label}</strong><small>{option.note}</small></span></button>)}</div></section>
-              <section className="mt-7"><div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold">Uso diário</h3><p className="mt-1 text-xs leading-5 text-zinc-500">Os limites reiniciam à meia-noite UTC.</p></div>{usage?.plan === 'lunamax' && <span className="plan-badge"><Sparkles className="h-3 w-3" /> LunaMax</span>}</div><div className="mt-4 rounded-2xl border border-lunar-400/15 bg-lunar-500/[0.055] p-4"><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm"><Coins className="h-4 w-4 text-lunar-300" /> Créditos restantes</span><strong className="text-lunar-300">{usage?.remaining ?? '—'} / {usage?.limit ?? '—'}</strong></div><div className="mt-4 flex items-start gap-2 border-t border-white/10 pt-3 text-xs leading-5 text-zinc-500"><Paperclip className="mt-0.5 h-4 w-4 shrink-0" />Cada mensagem custa 1 crédito; cada anexo acrescenta 1. São aceitos até 3 arquivos por mensagem.</div></div></section>
+              <section className="mt-7"><div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold">{usage?.unlimited ? 'Uso LunaMax' : 'Uso diário'}</h3><p className="mt-1 text-xs leading-5 text-zinc-500">{usage?.unlimited ? 'Seu plano não usa créditos nem limite de contexto.' : 'Os limites reiniciam à meia-noite UTC.'}</p></div>{usage?.plan === 'lunamax' && <span className="plan-badge"><Sparkles className="h-3 w-3" /> LunaMax</span>}</div><div className="mt-4 rounded-2xl border border-lunar-400/15 bg-lunar-500/[0.055] p-4"><div className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm"><Coins className="h-4 w-4 text-lunar-300" /> {usage?.unlimited ? 'Mensagens' : 'Créditos restantes'}</span><strong className="text-lunar-300">{usage?.unlimited ? 'Ilimitadas' : `${usage?.remaining ?? '—'} / ${usage?.limit ?? '—'}`}</strong></div><div className="mt-4 flex items-start gap-2 border-t border-white/10 pt-3 text-xs leading-5 text-zinc-500"><Paperclip className="mt-0.5 h-4 w-4 shrink-0" />{usage?.unlimited ? 'Mensagens e anexos não gastam créditos. O limite técnico continua em 3 arquivos por envio.' : 'Cada mensagem custa 1 crédito; cada anexo acrescenta 1. São aceitos até 3 arquivos por mensagem.'}</div></div></section>
               <section className="mt-7 border-t border-white/10 pt-6"><h3 className="text-sm font-semibold">Conta e suporte</h3><div className="mt-3 grid gap-2"><a href="mailto:core.healops@gmail.com?subject=Suporte%20Lunatica" className="settings-row !mt-0 border border-white/10"><Headphones className="h-4 w-4" /><span><strong>Falar com o suporte</strong><small>core.healops@gmail.com</small></span></a><button type="button" onClick={() => void signOut()} className="settings-row !mt-0 border border-white/10"><LogOut className="h-4 w-4" /><span><strong>Sair da conta</strong><small>Encerra a sessão neste dispositivo.</small></span></button></div><button type="button" onClick={() => setConfirmClear(true)} className="danger-row mt-3 border border-red-500/15"><Trash2 className="h-4 w-4" /><span><strong>Limpar todo o histórico</strong><small>Exclui conversas, mensagens e anexos. Suas memórias ficam preservadas.</small></span></button></section>
             </div>}
 
@@ -98,9 +99,11 @@ export function SettingsDialog({ open, initialTab = 'general', usage, plan, memo
             {tab === 'plan' && <div>
               <section className="lunamax-hero"><span className="micro-label text-lunar-300">PLANO LUNAMAX</span><div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><h3 className="text-3xl font-semibold tracking-[-.04em]">Mais espaço para criar.</h3><p className="mt-2 max-w-lg text-sm leading-6 text-zinc-400">Uma ativação manual de 30 dias, sem cobrança automática.</p></div><p className="text-right"><strong className="text-3xl text-lunar-200">R$ 12,99</strong><small className="block text-[10px] uppercase tracking-wider text-zinc-500">por chave de 30 dias</small></p></div></section>
 
+              {expiredPlan && !plan && <div className="plan-expired-card mt-5"><CircleAlert className="h-5 w-5" /><div><strong>Sua assinatura LunaMax terminou</strong><p>O acesso gratuito continua funcionando. Insira uma nova chave para reativar os benefícios.</p></div></div>}
+
               {plan ? <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.06] p-4"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><BadgeCheck className="h-5 w-5" /></span><div><strong className="text-sm text-emerald-200">LunaMax ativo</strong><p className="mt-1 text-xs text-zinc-500">Válido até {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date(plan.expires_at))}.</p></div></div></div> : <div className="mt-5 grid gap-3 sm:grid-cols-2">{[
-                ['300 créditos por dia', 'Dez vezes o limite gratuito para conversas mais longas.'],
-                ['Contexto ampliado', 'Até 60 mensagens e 30 anexos por conversa.'],
+                ['Mensagens ilimitadas', 'Sem créditos diários ou bloqueio por tamanho da conversa.'],
+                ['Contexto contínuo', 'Continue conversas longas sem precisar abrir um chat limpo.'],
                 ['Respostas mais completas', 'Mais espaço de raciocínio e respostas maiores quando necessário.'],
                 ['Busca na web', 'Pesquisa do Google quando o modelo detectar que informações atuais ajudam.'],
               ].map(([title, note]) => <article key={title} className="plan-benefit"><Check className="h-4 w-4" /><div><strong>{title}</strong><p>{note}</p></div></article>)}</div>}

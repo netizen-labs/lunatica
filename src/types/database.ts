@@ -12,9 +12,9 @@ export interface Database {
         Relationships: []
       }
       conversations: {
-        Row: { id: string; user_id: string; title: string; created_at: string; updated_at: string }
-        Insert: { id?: string; user_id: string; title?: string; created_at?: string; updated_at?: string }
-        Update: { title?: string; updated_at?: string }
+        Row: { id: string; user_id: string; title: string; is_pinned: boolean; is_temporary: boolean; expires_at: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; title?: string; is_pinned?: boolean; is_temporary?: boolean; expires_at?: string | null; created_at?: string; updated_at?: string }
+        Update: { title?: string; is_pinned?: boolean; is_temporary?: boolean; expires_at?: string | null; updated_at?: string }
         Relationships: []
       }
       messages: {
@@ -67,4 +67,5 @@ export type Message = Database['public']['Tables']['messages']['Row']
 export type MessageAttachment = Database['public']['Tables']['message_attachments']['Row']
 export type Memory = Database['public']['Tables']['memories']['Row']
 export type UserPlan = Database['public']['Tables']['user_plans']['Row']
-export type ChatMessage = Message & { attachments?: MessageAttachment[] }
+export type RenderedAttachment = MessageAttachment & { previewUrl?: string }
+export type ChatMessage = Message & { attachments?: RenderedAttachment[] }

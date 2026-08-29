@@ -6,10 +6,10 @@ import { Logo } from '../components/ui/Logo'
 import { Modal } from '../components/ui/Modal'
 
 const suggestions = [
-  { label: 'Construir com código', prompt: 'Crie uma API TypeScript segura e explique as principais decisões de arquitetura.', icon: Code2 },
-  { label: 'Entender de verdade', prompt: 'Explique um assunto complexo de forma simples, com exemplos e uma analogia útil.', icon: Lightbulb },
-  { label: 'Explorar possibilidades', prompt: 'Vamos desenvolver ideias originais para um projeto digital útil e divertido.', icon: Sparkles },
-  { label: 'Investigar um problema', prompt: 'Ajude a analisar um problema por diferentes perspectivas e montar um plano de ação.', icon: Search },
+  { label: 'Revisar meu código', prompt: 'Revise este código comigo: encontre a causa do problema, riscos e a correção mais simples.', icon: Code2 },
+  { label: 'Destravar uma ideia', prompt: 'Tenho uma ideia ainda confusa. Faça perguntas úteis e transforme-a em um plano concreto.', icon: Lightbulb },
+  { label: 'Escrever sem enrolação', prompt: 'Ajude a escrever um texto claro, natural e bem estruturado, sem frases genéricas.', icon: Sparkles },
+  { label: 'Decidir o próximo passo', prompt: 'Compare minhas opções com honestidade e recomende o próximo passo mais sensato.', icon: Search },
 ]
 
 export function GuestPage() {
@@ -50,8 +50,8 @@ export function GuestPage() {
 
         <div className="chat-canvas relative z-[1] min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           <section className="mx-auto flex min-h-full w-full max-w-5xl flex-col items-center justify-center px-5 py-12 text-center lg:px-10">
-            <div className="empty-orbit" aria-hidden="true"><span /></div>
-            <div className="relative animate-fade-in"><span className="micro-label inline-flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> MODELO LUNATICA 1.5</span><h1 className="mt-5 text-5xl font-semibold leading-none tracking-[-.065em] sm:text-7xl">Como posso ajudar?</h1><p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[var(--muted)] sm:text-base">Uma IA colaborativa, divertida e afiada para programação sênior, textos bem formados e ideias fora da órbita.</p><div className="mt-7 flex justify-center gap-2"><button type="button" onClick={openSignup} className="btn-primary"><Sparkles className="h-4 w-4" /> Começar agora</button><button type="button" onClick={openLogin} className="btn-secondary"><LogIn className="h-4 w-4" /> Entrar</button></div></div>
+            <div className="empty-orbit" aria-hidden="true" />
+            <div className="relative animate-fade-in"><span className="micro-label inline-flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> MODELO LUNATICA 1.5</span><h1 className="mt-5 text-5xl font-semibold leading-none tracking-[-.065em] sm:text-7xl">Como posso ajudar?</h1><p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[var(--muted)] sm:text-base">Programação de verdade, escrita cuidadosa e ideias que não param na primeira resposta.</p><div className="mt-7 flex justify-center gap-2"><button type="button" onClick={openSignup} className="btn-primary"><Sparkles className="h-4 w-4" /> Começar agora</button><button type="button" onClick={openLogin} className="btn-secondary"><LogIn className="h-4 w-4" /> Entrar</button></div></div>
             <div className="relative mt-10 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">{suggestions.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" onClick={() => setDraft(prompt)} className="suggestion-square"><span>0{index + 1}</span><Icon className="h-5 w-5" /><strong>{label}</strong></button>)}</div>
           </section>
         </div>

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, Brain, CircleAlert, Coins, Lightbulb, Orbit, PenLine, RefreshCw, Search, Sparkles, WifiOff } from 'lucide-react'
+import { ArrowRight, Brain, CircleAlert, Coins, Lightbulb, Orbit, PenLine, RefreshCw, Search, Sparkles, WifiOff, X } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MessageBubble } from '../components/chat/MessageBubble'
 import { MessageComposer } from '../components/chat/MessageComposer'
+import { ChatHeaderActions } from '../components/chat/ChatHeaderActions'
 import { ProfileDialog } from '../components/profile/ProfileDialog'
 import { MobileMenuButton, Sidebar } from '../components/sidebar/Sidebar'
 import { SettingsDialog, type SettingsTab } from '../components/settings/SettingsDialog'
@@ -15,10 +16,10 @@ import { usePlan } from '../hooks/usePlan'
 import { friendlyError } from '../lib/utils'
 
 const suggestions = [
-  { label: 'Escrever código', prompt: 'Mostre um exemplo de função TypeScript bem tipada e explique as decisões importantes.', icon: PenLine },
-  { label: 'Explicar um assunto', prompt: 'Explique de forma clara e com exemplos como os modelos de linguagem funcionam.', icon: Lightbulb },
-  { label: 'Criar ideias', prompt: 'Crie cinco ideias originais para um projeto digital simples e útil.', icon: Sparkles },
-  { label: 'Analisar um problema', prompt: 'Ensine um método prático para analisar problemas complexos passo a passo.', icon: Search },
+  { label: 'Revisar meu código', prompt: 'Revise este código comigo: encontre a causa do problema, riscos e a correção mais simples.', icon: PenLine },
+  { label: 'Destravar uma ideia', prompt: 'Tenho uma ideia ainda confusa. Faça perguntas úteis e transforme-a em um plano concreto.', icon: Lightbulb },
+  { label: 'Escrever sem enrolação', prompt: 'Ajude a escrever um texto claro, natural e bem estruturado, sem frases genéricas.', icon: Sparkles },
+  { label: 'Decidir o próximo passo', prompt: 'Compare minhas opções com honestidade e recomende o próximo passo mais sensato.', icon: Search },
 ]
 
 export function ChatPage() {
@@ -31,6 +32,8 @@ export function ChatPage() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [temporaryMode, setTemporaryMode] = useState(false)
+  const [expiredDismissed, setExpiredDismissed] = useState(false)
   const [online, setOnline] = useState(navigator.onLine)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -50,10 +53,10 @@ export function ChatPage() {
   }, [])
 
   const selectConversation = useCallback((id: string) => navigate(`/chat/${id}`), [navigate])
-  const newChat = useCallback(() => navigate('/'), [navigate])
+  const newChat = useCallback(() => { setTemporaryMode(false); navigate('/') }, [navigate])
 
   async function send(content: string, files: File[] = []) {
-    const id = await chat.sendMessage(content, files)
+    const id = await chat.sendMessage(content, files, temporaryMode)
     if (id && id !== conversationId) navigate(`/chat/${id}`, { replace: true })
   }
 
@@ -74,8 +77,9 @@ export function ChatPage() {
   const userLabel = profile?.display_name || user.user_metadata.display_name as string | undefined || user.email?.split('@')[0] || 'Conta'
   const userMessageCount = chat.messages.filter((message) => message.role === 'user').length
   const attachmentCount = chat.messages.reduce((total, message) => total + (message.attachments?.length ?? 0), 0)
-  const contextLimitReached = Boolean(chat.activeId && chat.usage && (userMessageCount >= chat.usage.conversation.messageLimit || attachmentCount >= chat.usage.conversation.attachmentLimit))
-  const dailyLimitReached = chat.usage?.remaining === 0
+  const contextLimitReached = Boolean(chat.activeId && chat.usage && !chat.usage.unlimited && ((chat.usage.conversation.messageLimit !== null && userMessageCount >= chat.usage.conversation.messageLimit) || (chat.usage.conversation.attachmentLimit !== null && attachmentCount >= chat.usage.conversation.attachmentLimit)))
+  const dailyLimitReached = !chat.usage?.unlimited && chat.usage?.remaining === 0
+  const temporaryActive = Boolean(activeConversation?.is_temporary || (!chat.activeId && temporaryMode))
 
   function openSettings(tab: SettingsTab) {
     setSettingsTab(tab)
@@ -94,10 +98,12 @@ export function ChatPage() {
         avatarUrl={avatarUrl}
         remainingCredits={chat.usage?.remaining}
         creditLimit={chat.usage?.limit}
+        unlimited={chat.usage?.unlimited}
         onMobileClose={() => setMobileOpen(false)}
         onNewChat={newChat}
         onSelect={selectConversation}
         onRename={chat.renameConversation}
+        onTogglePin={chat.togglePinConversation}
         onDelete={removeConversation}
         onProfile={() => setProfileOpen(true)}
         onSettings={() => openSettings('general')}
@@ -108,20 +114,22 @@ export function ChatPage() {
         <header className="mission-header">
           <MobileMenuButton onClick={() => setMobileOpen(true)} />
           <button type="button" className={`lunamax-button ${plan.isLunaMax ? 'active' : ''}`} onClick={() => openSettings('plan')}><Sparkles className="h-3.5 w-3.5" /><span>{plan.isLunaMax ? 'LunaMax ativo' : <><span className="hidden min-[420px]:inline">Comprar </span>LunaMax</>}</span></button>
-          <div className="min-w-0 flex-1"><span className="micro-label hidden sm:block">SESSÃO ATIVA</span><h1 className="truncate text-sm font-medium text-zinc-200">{activeConversation?.title || 'Nova conversa'}</h1></div>
-          {chat.usage && <span className="status-pill hidden sm:flex"><Coins className="h-3.5 w-3.5" /> {chat.usage.remaining} créditos</span>}
+          <div className="min-w-0 flex-1" />
+          {chat.usage && <span className="status-pill hidden md:flex"><Coins className="h-3.5 w-3.5" /> {chat.usage.unlimited ? 'Ilimitado' : `${chat.usage.remaining} créditos`}</span>}
           {!online && <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-300"><WifiOff className="h-3.5 w-3.5" /> Offline</span>}
+          <ChatHeaderActions conversation={activeConversation} temporaryMode={temporaryMode} onNewChat={newChat} onToggleTemporary={() => setTemporaryMode((value) => !value)} onTogglePin={chat.togglePinConversation} onRename={chat.renameConversation} onDelete={removeConversation} />
         </header>
 
         {memory.notice && <button type="button" className="memory-saved-banner" onClick={() => { memory.clearNotice(); openSettings('memory') }}><span className="memory-pulse"><Brain className="h-3.5 w-3.5" /></span><span><strong>{memory.notice}</strong><small>Toque para revisar no banco de memória</small></span></button>}
+        {plan.expiredPlan && !expiredDismissed && <div className="plan-expired-banner" role="status"><span><CircleAlert className="h-4 w-4" /></span><div><strong>Sua assinatura LunaMax terminou</strong><p>Você voltou ao plano gratuito. Ative uma nova chave quando quiser recuperar mensagens ilimitadas e busca na web.</p></div><button type="button" className="btn-primary shrink-0" onClick={() => openSettings('plan')}>Renovar</button><button type="button" className="icon-btn !h-8 !w-8 shrink-0" onClick={() => setExpiredDismissed(true)} aria-label="Fechar aviso"><X className="h-4 w-4" /></button></div>}
 
         <div className="chat-canvas min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           {chat.loadingMessages ? (
             <div className="mx-auto max-w-3xl space-y-8 px-6 py-10">{Array.from({ length: 3 }).map((_, index) => <div key={index} className={`h-20 animate-pulse rounded-2xl bg-zinc-200/70 dark:bg-white/[0.04] ${index % 2 === 0 ? 'ml-auto w-2/3' : 'w-full'}`} />)}</div>
           ) : chat.messages.length === 0 ? (
             <section className="relative mx-auto flex min-h-full w-full max-w-5xl flex-col items-center justify-center px-5 py-12 text-center">
-              <div className="empty-orbit" aria-hidden="true"><span /></div>
-              <div className="relative"><span className="micro-label inline-flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> LUNATICA 1.5</span><h2 className="mt-5 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">Como posso ajudar?</h2><p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[var(--muted)]">Escolha um ponto de partida ou envie sua própria ideia. A órbita começa por você.</p></div>
+              <div className="empty-orbit" aria-hidden="true" />
+              <div className="relative"><span className="micro-label inline-flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> LUNATICA 1.5</span><h2 className="mt-5 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">Como posso ajudar?</h2><p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[var(--muted)]">Traga um bug, um rascunho ou uma ideia. Eu entro exatamente no ponto em que você parou.</p></div>
               <div className="relative mt-10 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">{suggestions.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" onClick={() => void send(prompt)} className="suggestion-square"><span className="text-[9px] tracking-[.16em] text-zinc-600">0{index + 1}</span><Icon className="h-5 w-5 text-lunar-300" /><strong>{label}</strong></button>)}</div>
             </section>
           ) : (
@@ -134,12 +142,12 @@ export function ChatPage() {
         </div>
 
         <div className="composer-dock">
-          {dailyLimitReached || contextLimitReached ? <div className="limit-panel"><div className="limit-panel-icon"><Orbit className="h-5 w-5" /></div><div className="min-w-0 flex-1"><strong>{dailyLimitReached ? 'Seus créditos de hoje acabaram' : 'Esta conversa chegou ao limite de contexto'}</strong><p>{dailyLimitReached ? 'O limite gratuito volta no próximo ciclo. O LunaMax amplia o uso diário.' : 'Abra um chat limpo para continuar sem o contexto e os anexos desta conversa.'}</p></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><button type="button" className="btn-secondary" onClick={newChat}>Novo chat <ArrowRight className="h-4 w-4" /></button><button type="button" className="btn-primary" onClick={() => openSettings('plan')}>Ver LunaMax</button></div></div> : <MessageComposer generating={chat.generating} disabled={!online} allowAttachments remainingCredits={chat.usage?.remaining} onSend={send} onStop={chat.stopGeneration} />}
+          {dailyLimitReached || contextLimitReached ? <div className="limit-panel"><div className="limit-panel-icon"><Orbit className="h-5 w-5" /></div><div className="min-w-0 flex-1"><strong>{dailyLimitReached ? 'Seus créditos de hoje acabaram' : 'Esta conversa chegou ao limite de contexto'}</strong><p>{dailyLimitReached ? 'O limite gratuito volta no próximo ciclo. O LunaMax remove o limite de mensagens.' : 'Abra um chat limpo para continuar sem o contexto e os anexos desta conversa.'}</p></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><button type="button" className="btn-secondary" onClick={newChat}>Novo chat <ArrowRight className="h-4 w-4" /></button><button type="button" className="btn-primary" onClick={() => openSettings('plan')}>Ver LunaMax</button></div></div> : <MessageComposer generating={chat.generating} disabled={!online} allowAttachments remainingCredits={chat.usage?.remaining} unlimited={chat.usage?.unlimited} temporary={temporaryActive} onSend={send} onStop={chat.stopGeneration} />}
         </div>
       </main>
 
       <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
-      <SettingsDialog key={settingsTab} open={settingsOpen} initialTab={settingsTab} usage={chat.usage} plan={plan.plan} memories={memory.memories} memoryLoading={memory.loading} onClose={() => setSettingsOpen(false)} onClearHistory={async () => { await chat.clearHistory(); navigate('/') }} onAddMemory={memory.addMemory} onDeleteMemory={memory.deleteMemory} onRedeemPlan={async (code, acceptedDisclaimer) => { await plan.redeem(code, acceptedDisclaimer); await chat.refreshUsage() }} />
+      <SettingsDialog key={settingsTab} open={settingsOpen} initialTab={settingsTab} usage={chat.usage} plan={plan.plan} expiredPlan={plan.expiredPlan} memories={memory.memories} memoryLoading={memory.loading} onClose={() => setSettingsOpen(false)} onClearHistory={async () => { await chat.clearHistory(); navigate('/') }} onAddMemory={memory.addMemory} onDeleteMemory={memory.deleteMemory} onRedeemPlan={async (code, acceptedDisclaimer) => { await plan.redeem(code, acceptedDisclaimer); setExpiredDismissed(true); await chat.refreshUsage() }} />
     </div>
   )
 }

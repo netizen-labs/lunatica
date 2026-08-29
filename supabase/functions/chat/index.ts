@@ -3,15 +3,15 @@ import { corsHeaders } from '../_shared/cors.ts'
 import { GeminiError, streamResponse, type GeminiAttachment, type HistoryMessage } from '../_shared/gemini.ts'
 
 const MAX_REQUESTS_PER_MINUTE = 20
+const LUNAMAX_REQUESTS_PER_MINUTE = 60
 const FREE_DAILY_CREDIT_LIMIT = 30
-const LUNAMAX_DAILY_CREDIT_LIMIT = 300
 const HISTORY_LIMIT = 40
 const MAX_ATTACHMENTS = 3
 const MAX_INLINE_BYTES = 12 * 1024 * 1024
 
 function planLimits(lunaMax: boolean) {
   return lunaMax
-    ? { daily: LUNAMAX_DAILY_CREDIT_LIMIT, messages: 60, conversationAttachments: 30 }
+    ? { daily: null, messages: null, conversationAttachments: null }
     : { daily: FREE_DAILY_CREDIT_LIMIT, messages: 12, conversationAttachments: 3 }
 }
 
@@ -67,13 +67,24 @@ function dayWindow() {
 async function hasLunaMax(admin: SupabaseClient, userId: string) {
   const { data, error } = await admin.from('user_plans').select('status, expires_at').eq('user_id', userId).maybeSingle()
   if (error) throw error
-  return data?.status === 'active' && new Date(data.expires_at).getTime() > Date.now()
+  const active = data?.status === 'active' && new Date(data.expires_at).getTime() > Date.now()
+  if (data?.status === 'active' && !active) await admin.from('user_plans').update({ status: 'expired' }).eq('user_id', userId)
+  return active
 }
 
 async function usageStatus(admin: SupabaseClient, userId: string, lunaMax?: boolean) {
   const { start, resetsAt } = dayWindow()
   const activeLunaMax = lunaMax ?? await hasLunaMax(admin, userId)
   const limits = planLimits(activeLunaMax)
+  if (activeLunaMax) return {
+    limit: null,
+    used: 0,
+    remaining: null,
+    unlimited: true,
+    resetsAt,
+    plan: 'lunamax',
+    conversation: { messageLimit: null, attachmentLimit: null },
+  }
   const { data, error } = await admin.from('usage_events').select('cost').eq('user_id', userId).gte('created_at', start).limit(500)
   if (error) throw error
   const used = (data ?? []).reduce((total, event) => total + Number(event.cost), 0)
@@ -81,6 +92,7 @@ async function usageStatus(admin: SupabaseClient, userId: string, lunaMax?: bool
     limit: limits.daily,
     used,
     remaining: Math.max(0, limits.daily - used),
+    unlimited: false,
     resetsAt,
     plan: activeLunaMax ? 'lunamax' : 'free',
     conversation: { messageLimit: limits.messages, attachmentLimit: limits.conversationAttachments },
@@ -129,15 +141,16 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Conversa inválida' }, 400)
     }
 
-    const { data: conversation, error: conversationError } = await userClient.from('conversations').select('id').eq('id', body.conversationId).single()
+    const { data: conversation, error: conversationError } = await userClient.from('conversations').select('id, is_temporary, expires_at').eq('id', body.conversationId).single()
     if (conversationError || !conversation) return jsonResponse({ error: 'Conversa não encontrada' }, 404)
+    if (conversation.is_temporary && conversation.expires_at && new Date(conversation.expires_at).getTime() <= Date.now()) return jsonResponse({ error: 'Este chat temporário expirou.' }, 410)
 
     const minuteAgo = new Date(Date.now() - 60_000).toISOString()
     const tenMinutesAgo = new Date(Date.now() - 600_000).toISOString()
     await admin.from('rate_limits').delete().eq('user_id', user.id).lt('created_at', tenMinutesAgo)
     const { count, error: countError } = await admin.from('rate_limits').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', minuteAgo)
     if (countError) throw countError
-    if ((count ?? 0) >= MAX_REQUESTS_PER_MINUTE) return jsonResponse({ error: 'Muitas solicitações. Aguarde um minuto.' }, 429)
+    if ((count ?? 0) >= (lunaMax ? LUNAMAX_REQUESTS_PER_MINUTE : MAX_REQUESTS_PER_MINUTE)) return jsonResponse({ error: 'Muitas solicitações. Aguarde um minuto.' }, 429)
 
     const { data: history, error: historyError } = await userClient.from('messages').select('id, role, content, created_at').eq('conversation_id', body.conversationId).order('created_at', { ascending: false }).limit(lunaMax ? 120 : HISTORY_LIMIT)
     if (historyError) throw historyError
@@ -155,7 +168,7 @@ Deno.serve(async (request) => {
       userClient.from('message_attachments').select('id', { count: 'exact', head: true }).eq('conversation_id', body.conversationId),
     ])
     if (messageCountError || conversationAttachmentCountError) throw messageCountError ?? conversationAttachmentCountError
-    if ((messageCount ?? 0) > limits.messages || (conversationAttachmentCount ?? 0) > limits.conversationAttachments) {
+    if (!lunaMax && ((messageCount ?? 0) > limits.messages! || (conversationAttachmentCount ?? 0) > limits.conversationAttachments!)) {
       return jsonResponse({
         error: 'Esta conversa atingiu o limite de contexto. Comece um novo chat limpo para continuar.',
         code: 'NEW_CHAT_REQUIRED',
@@ -164,20 +177,26 @@ Deno.serve(async (request) => {
 
     const cost = 1 + attachments.length
     const usage = await usageStatus(admin, user.id, lunaMax)
-    if (usage.remaining < cost) return jsonResponse({ error: `Limite diário insuficiente. Esta mensagem custa ${cost} crédito${cost === 1 ? '' : 's'}.` }, 429)
+    if (!lunaMax && usage.remaining !== null && usage.remaining < cost) return jsonResponse({ error: `Limite diário insuficiente. Esta mensagem custa ${cost} crédito${cost === 1 ? '' : 's'}.` }, 429)
 
     const { error: rateError } = await admin.from('rate_limits').insert({ user_id: user.id })
     if (rateError) throw rateError
 
     const { data: profile, error: profileError } = await admin.from('profiles').select('custom_instructions').eq('id', user.id).single()
     if (profileError) throw profileError
-    const { data: memoryRows, error: memoryError } = await userClient.from('memories').select('summary').order('updated_at', { ascending: false }).limit(20)
-    if (memoryError) throw memoryError
+    let memoryRows: Array<{ summary: string }> = []
+    if (!conversation.is_temporary) {
+      const { data, error: memoryError } = await userClient.from('memories').select('summary').order('updated_at', { ascending: false }).limit(20)
+      if (memoryError) throw memoryError
+      memoryRows = data ?? []
+    }
     const files = await downloadAttachments(admin, attachments)
     const messages = [...history].reverse().map(({ role, content }) => ({ role, content })) as HistoryMessage[]
     const stream = await streamResponse(messages, request.signal, { customInstructions: profile.custom_instructions, attachments: files, memories: (memoryRows ?? []).map((row) => row.summary), lunaMax })
-    const { error: usageError } = await admin.from('usage_events').insert({ user_id: user.id, cost, attachment_count: attachments.length })
-    if (usageError) throw usageError
+    if (!lunaMax) {
+      const { error: usageError } = await admin.from('usage_events').insert({ user_id: user.id, cost, attachment_count: attachments.length })
+      if (usageError) throw usageError
+    }
     return new Response(stream, {
       status: 200,
       headers: {

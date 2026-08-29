@@ -3,7 +3,7 @@ import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { getUsageStatus, streamChatResponse } from '../lib/api'
 import { createConversationTitle, friendlyError } from '../lib/utils'
-import type { ChatMessage, Conversation, Message, MessageAttachment } from '../types/database'
+import type { ChatMessage, Conversation, Message, MessageAttachment, RenderedAttachment } from '../types/database'
 import type { UsageStatus } from '../types/chat'
 
 interface UseChatOptions {
@@ -16,8 +16,8 @@ interface UseChatOptions {
 const MAX_ATTACHMENTS = 3
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
 const MAX_TOTAL_SIZE = 12 * 1024 * 1024
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'])
-const MEMORY_SIGNAL = /\b(meu nome|me chamo|pode me chamar|eu estudo|estou estudando|estou aprendendo|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|designer|estudante)|eu trabalho|eu prefiro|gosto de|adoro|não gosto|moro em|minha profissão|meu objetivo|quero aprender|quero criar|estou criando|estou desenvolvendo|meu projeto|minha ideia)\b/i
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/avif', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'])
+const MEMORY_SIGNAL = /\b(meu nome|me chamo|pode me chamar|eu estudo|estou estudando|estou aprendendo|sou (?:um |uma )?(?:desenvolvedor|desenvolvedora|programador|programadora|designer|estudante|criador|criadora)|eu trabalho|trabalho como|estou trabalhando em|eu prefiro|prefiro que|gosto de|adoro|não gosto|moro em|minha profissão|meu objetivo|meus objetivos|quero aprender|quero criar|estou criando|estou desenvolvendo|estou escrevendo|estou fazendo|meu projeto|minha ideia|meu aplicativo|meu app|quero respostas)\b/i
 
 function safeFileName(name: string) {
   return name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'anexo'
@@ -33,11 +33,38 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
   const [generating, setGenerating] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
+  const decorateAttachments = useCallback(async (rows: MessageAttachment[]): Promise<RenderedAttachment[]> => Promise.all(rows.map(async (row) => {
+    if (!row.mime_type.startsWith('image/')) return row
+    const { data, error } = await supabase.storage.from('attachments').createSignedUrl(row.storage_path, 60 * 60)
+    return error ? row : { ...row, previewUrl: data.signedUrl }
+  })), [])
+
+  const purgeExpiredTemporaryChats = useCallback(async () => {
+    try {
+      const now = new Date().toISOString()
+      const { data: expired, error } = await supabase.from('conversations').select('id').eq('is_temporary', true).lt('expires_at', now)
+      if (error) throw error
+      const ids = (expired ?? []).map((conversation) => conversation.id)
+      if (!ids.length) return
+      const { data: attachments, error: attachmentError } = await supabase.from('message_attachments').select('storage_path').in('conversation_id', ids)
+      if (attachmentError) throw attachmentError
+      const paths = (attachments ?? []).map((row) => row.storage_path)
+      if (paths.length) await supabase.storage.from('attachments').remove(paths)
+      const { error: deleteError } = await supabase.from('conversations').delete().in('id', ids)
+      if (deleteError) throw deleteError
+    } catch (error) {
+      if (import.meta.env.DEV) console.error('Falha ao limpar chats temporários', error)
+    }
+  }, [])
+
+  const conversationQuery = useCallback(() => supabase.from('conversations').select('*').or(`is_temporary.eq.false,expires_at.gt.${new Date().toISOString()}`).order('is_pinned', { ascending: false }).order('updated_at', { ascending: false }).limit(100), [])
+
   const refreshConversations = useCallback(async () => {
-    const { data, error } = await supabase.from('conversations').select('*').order('updated_at', { ascending: false }).limit(100)
+    await purgeExpiredTemporaryChats()
+    const { data, error } = await conversationQuery()
     if (error) throw error
     setConversations(data)
-  }, [])
+  }, [conversationQuery, purgeExpiredTemporaryChats])
 
   const refreshUsage = useCallback(async (signal?: AbortSignal) => {
     const status = await getUsageStatus(session, signal)
@@ -47,10 +74,10 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
   useEffect(() => {
     let active = true
     const controller = new AbortController()
-    void Promise.all([
-      supabase.from('conversations').select('*').order('updated_at', { ascending: false }).limit(100),
+    void purgeExpiredTemporaryChats().then(() => Promise.all([
+      conversationQuery(),
       getUsageStatus(session, controller.signal),
-    ]).then(([conversationResult, nextUsage]) => {
+    ])).then(([conversationResult, nextUsage]) => {
       if (!active) return
       if (conversationResult.error) throw conversationResult.error
       setConversations(conversationResult.data)
@@ -63,7 +90,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       if (active) setLoadingConversations(false)
     })
     return () => { active = false; controller.abort() }
-  }, [onNotify, session])
+  }, [conversationQuery, onNotify, purgeExpiredTemporaryChats, session])
 
   const openConversation = useCallback(async (conversationId: string | null) => {
     abortRef.current?.abort()
@@ -74,13 +101,24 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     }
     setLoadingMessages(true)
     try {
+      const { data: selectedConversation, error: conversationError } = await supabase.from('conversations').select('*').eq('id', conversationId).maybeSingle()
+      if (conversationError) throw conversationError
+      if (!selectedConversation) throw new Error('Conversa não encontrada')
+      if (selectedConversation.is_temporary && selectedConversation.expires_at && new Date(selectedConversation.expires_at).getTime() <= Date.now()) {
+        await purgeExpiredTemporaryChats()
+        setActiveId(null)
+        setMessages([])
+        onNotify('Este chat temporário expirou e foi apagado.', 'info')
+        return
+      }
+      setConversations((current) => current.some((conversation) => conversation.id === selectedConversation.id) ? current : [selectedConversation, ...current])
       const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', conversationId).order('created_at', { ascending: true })
       if (error) throw error
       let attachments: MessageAttachment[] = []
       if (data.length) {
         const { data: attachmentData, error: attachmentError } = await supabase.from('message_attachments').select('*').in('message_id', data.map((message) => message.id)).order('created_at', { ascending: true })
         if (attachmentError) throw attachmentError
-        attachments = attachmentData
+        attachments = await decorateAttachments(attachmentData)
       }
       setMessages(data.map((message) => ({ ...message, attachments: attachments.filter((file) => file.message_id === message.id) })))
     } catch (error) {
@@ -89,7 +127,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     } finally {
       setLoadingMessages(false)
     }
-  }, [onNotify])
+  }, [decorateAttachments, onNotify, purgeExpiredTemporaryChats])
 
   const generate = useCallback(async (conversationId: string) => {
     const controller = new AbortController()
@@ -142,7 +180,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     if (files.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_SIZE) throw new Error('Os anexos devem somar no máximo 12 MB')
     const uploaded: string[] = []
     try {
-      const rows: MessageAttachment[] = []
+      const rows: RenderedAttachment[] = []
       for (const file of files) {
         const path = `${user.id}/${conversationId}/${crypto.randomUUID()}-${safeFileName(file.name)}`
         const { error: uploadError } = await supabase.storage.from('attachments').upload(path, file, { contentType: file.type, upsert: false })
@@ -150,7 +188,10 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
         uploaded.push(path)
         const { data, error } = await supabase.from('message_attachments').insert({ message_id: messageId, conversation_id: conversationId, user_id: user.id, storage_path: path, file_name: file.name.slice(0, 160), mime_type: file.type, size_bytes: file.size }).select().single()
         if (error) throw error
-        rows.push(data)
+        if (data.mime_type.startsWith('image/')) {
+          const { data: signed } = await supabase.storage.from('attachments').createSignedUrl(data.storage_path, 60 * 60)
+          rows.push(signed ? { ...data, previewUrl: signed.signedUrl } : data)
+        } else rows.push(data)
       }
       return rows
     } catch (error) {
@@ -160,28 +201,31 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     }
   }, [user.id])
 
-  const sendMessage = useCallback(async (rawContent: string, files: File[] = []) => {
+  const sendMessage = useCallback(async (rawContent: string, files: File[] = [], temporaryMode = false) => {
     const content = rawContent.trim() || (files.length ? 'Analise os anexos enviados.' : '')
     if (!content || generating) return activeId
     const cost = 1 + files.length
+    const activeConversation = conversations.find((conversation) => conversation.id === activeId)
+    const isTemporary = activeConversation?.is_temporary ?? temporaryMode
     const userMessageCount = messages.filter((message) => message.role === 'user').length
     const conversationAttachmentCount = messages.reduce((total, message) => total + (message.attachments?.length ?? 0), 0)
-    const messageLimit = usage?.conversation.messageLimit ?? 12
-    const attachmentLimit = usage?.conversation.attachmentLimit ?? 3
-    if (activeId && (userMessageCount >= messageLimit || conversationAttachmentCount + files.length > attachmentLimit)) {
+    const messageLimit = usage?.conversation.messageLimit
+    const attachmentLimit = usage?.conversation.attachmentLimit
+    if (activeId && !usage?.unlimited && ((messageLimit !== null && messageLimit !== undefined && userMessageCount >= messageLimit) || (attachmentLimit !== null && attachmentLimit !== undefined && conversationAttachmentCount + files.length > attachmentLimit))) {
       onNotify('Esta conversa atingiu o limite de contexto. Comece um novo chat limpo para continuar.', 'info')
       return activeId
     }
-    if (usage && usage.remaining < cost) {
+    if (usage && usage.remaining !== null && usage.remaining < cost) {
       onNotify(`Você precisa de ${cost} créditos, mas restam ${usage.remaining} hoje.`, 'error')
       return activeId
     }
     let conversationId = activeId
     let createdConversation = false
+    let insertedMessageId: string | null = null
     try {
       if (!conversationId) {
         const titleSource = rawContent.trim() || files[0]?.name || 'Conversa com anexos'
-        const { data, error } = await supabase.from('conversations').insert({ user_id: user.id, title: createConversationTitle(titleSource) }).select().single()
+        const { data, error } = await supabase.from('conversations').insert({ user_id: user.id, title: createConversationTitle(titleSource), is_temporary: temporaryMode, expires_at: temporaryMode ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() : null }).select().single()
         if (error) throw error
         conversationId = data.id
         createdConversation = true
@@ -191,18 +235,20 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
 
       const { data: userMessage, error } = await supabase.from('messages').insert({ conversation_id: conversationId, user_id: user.id, role: 'user', content }).select().single()
       if (error) throw error
+      insertedMessageId = userMessage.id
       const attachments = files.length ? await uploadFiles(conversationId, userMessage.id, files) : []
       setMessages((current) => [...current, { ...userMessage, attachments }])
-      if (MEMORY_SIGNAL.test(content)) void onAnalyzeMemory?.(userMessage.id)
+      if (!isTemporary && MEMORY_SIGNAL.test(content)) void onAnalyzeMemory?.(userMessage.id)
       await generate(conversationId)
       return conversationId
     } catch (error) {
+      if (!createdConversation && insertedMessageId) await supabase.from('messages').delete().eq('id', insertedMessageId)
       if (createdConversation && conversationId) await supabase.from('conversations').delete().eq('id', conversationId)
       onNotify(friendlyError(error), 'error')
       if (import.meta.env.DEV) console.error(error)
       return conversationId
     }
-  }, [activeId, generate, generating, messages, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
+  }, [activeId, conversations, generate, generating, messages, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
 
   const removeStoredAttachments = useCallback(async (query: 'conversation' | 'messages' | 'all', value?: string | string[]) => {
     let request = supabase.from('message_attachments').select('storage_path')
@@ -228,10 +274,27 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
   const renameConversation = useCallback(async (id: string, title: string) => {
     const cleanTitle = title.replace(/\s+/g, ' ').trim().slice(0, 80)
     if (!cleanTitle) return
-    const { error } = await supabase.from('conversations').update({ title: cleanTitle }).eq('id', id)
-    if (error) throw error
-    setConversations((current) => current.map((conversation) => conversation.id === id ? { ...conversation, title: cleanTitle } : conversation))
-    onNotify('Título alterado.', 'success')
+    try {
+      const { error } = await supabase.from('conversations').update({ title: cleanTitle }).eq('id', id)
+      if (error) throw error
+      setConversations((current) => current.map((conversation) => conversation.id === id ? { ...conversation, title: cleanTitle } : conversation))
+      onNotify('Título alterado.', 'success')
+    } catch (error) {
+      onNotify(friendlyError(error), 'error')
+      if (import.meta.env.DEV) console.error(error)
+    }
+  }, [onNotify])
+
+  const togglePinConversation = useCallback(async (id: string, pinned: boolean) => {
+    try {
+      const { error } = await supabase.from('conversations').update({ is_pinned: pinned }).eq('id', id)
+      if (error) throw error
+      setConversations((current) => current.map((conversation) => conversation.id === id ? { ...conversation, is_pinned: pinned } : conversation).sort((a, b) => Number(b.is_pinned) - Number(a.is_pinned) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()))
+      onNotify(pinned ? 'Conversa fixada.' : 'Conversa desafixada.', 'success')
+    } catch (error) {
+      onNotify(friendlyError(error), 'error')
+      if (import.meta.env.DEV) console.error(error)
+    }
   }, [onNotify])
 
   const deleteConversation = useCallback(async (id: string) => {
@@ -276,5 +339,5 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     await generate(message.conversation_id)
   }, [generate, generating, onAnalyzeMemory, removeStoredAttachments])
 
-  return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, retryGeneration, renameConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage, refreshUsage }
+  return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, retryGeneration, renameConversation, togglePinConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage, refreshUsage }
 }

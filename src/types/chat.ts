@@ -15,14 +15,15 @@ export interface ChatResponse {
 }
 
 export interface UsageStatus {
-  limit: number
+  limit: number | null
   used: number
-  remaining: number
+  remaining: number | null
+  unlimited: boolean
   resetsAt: string
   plan: 'free' | 'lunamax'
   conversation: {
-    messageLimit: number
-    attachmentLimit: number
+    messageLimit: number | null
+    attachmentLimit: number | null
   }
 }
 
