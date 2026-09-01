@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Coins, LogOut, Menu, MessageSquare, MoreHorizontal, Pencil, Pin, PinOff, Plus, Settings, Trash2, UserRound, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Menu, MessageSquare, MoreHorizontal, Pencil, Pin, PinOff, Plus, Settings, Trash2, UserRound, X } from 'lucide-react'
 import type { Conversation } from '../../types/database'
 import { cn, formatRelativeDate } from '../../lib/utils'
 import { Logo } from '../ui/Logo'
@@ -13,9 +13,6 @@ interface SidebarProps {
   userLabel: string
   username?: string | null
   avatarUrl?: string | null
-  remainingCredits?: number | null
-  creditLimit?: number | null
-  unlimited?: boolean
   onMobileClose: () => void
   onNewChat: () => void
   onSelect: (id: string) => void
@@ -115,7 +112,6 @@ export function Sidebar(props: SidebarProps) {
       </nav>
 
       <div className="border-t border-white/10 p-3">
-        {!collapsed && (props.unlimited || props.remainingCredits !== undefined && props.remainingCredits !== null) && <div className="mb-2 rounded-xl border border-lunar-400/15 bg-lunar-500/[0.06] px-3 py-2.5"><div className="flex items-center justify-between text-xs"><span className="flex items-center gap-2 text-zinc-300"><Coins className="h-3.5 w-3.5 text-lunar-300" /> {props.unlimited ? 'Uso LunaMax' : 'Créditos hoje'}</span><strong className="text-lunar-300">{props.unlimited ? 'Ilimitado' : props.remainingCredits}</strong></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-lunar-400" style={{ width: props.unlimited ? '100%' : `${Math.min(100, ((props.remainingCredits ?? 0) / (props.creditLimit || 30)) * 100)}%` }} /></div></div>}
         <button type="button" onClick={() => { props.onProfile(); props.onMobileClose() }} className={cn('flex w-full items-center rounded-xl text-left transition hover:bg-zinc-200/70 dark:hover:bg-white/[0.06]', collapsed ? 'h-11 justify-center' : 'gap-3 px-2 py-2')} aria-label="Abrir perfil">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-lunar-500/15 text-xs font-semibold text-lunar-300">{props.avatarUrl ? <img src={props.avatarUrl} alt="" className="h-full w-full object-cover" /> : props.userLabel.slice(0, 1).toUpperCase()}</div>
           {!collapsed && <span className="min-w-0 flex-1"><strong className="block truncate text-sm font-medium">{props.userLabel}</strong>{props.username && <small className="block truncate text-[10px] text-zinc-500">@{props.username}</small>}</span>}

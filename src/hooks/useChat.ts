@@ -260,7 +260,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       return activeId
     }
     if (usage && usage.remaining !== null && usage.remaining < cost) {
-      onNotify(`Você precisa de ${cost} créditos, mas restam ${usage.remaining} hoje.`, 'error')
+      onNotify('Seu limite gratuito terminou por hoje. Conheça o LunaMax para continuar sem interrupções.', 'error')
       return activeId
     }
     let conversationId = activeId

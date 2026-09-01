@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
-import { ArrowUp, Clock3, Coins, FileText, LoaderCircle, Mic, MicOff, Paperclip, Square, X } from 'lucide-react'
+import { ArrowUp, Clock3, FileText, LoaderCircle, Mic, MicOff, Paperclip, Square, X } from 'lucide-react'
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition'
 
 interface MessageComposerProps {
@@ -106,7 +106,7 @@ export function MessageComposer({ generating, disabled = false, value: controlle
           <button type="button" onClick={speech.toggle} disabled={disabled || generating || sending} className={`voice-button ${speech.listening ? 'listening' : ''}`} aria-label={speech.listening ? 'Parar ditado' : 'Usar microfone'} title={speech.supported ? 'Ditado por voz' : 'Ditado indisponível neste navegador'}>{speech.listening ? <MicOff className="h-[18px] w-[18px]" /> : <Mic className="h-[18px] w-[18px]" />}</button>
           {generating ? <button type="button" onClick={onStop} className="composer-action stop" aria-label="Parar geração"><Square className="h-3.5 w-3.5 fill-current" /></button> : <button type="button" onClick={() => void send()} disabled={disabled || !hasPayload || sending || insufficientCredits} className="composer-action" aria-label="Enviar mensagem">{sending ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" />}</button>}
         </div>
-        {(allowAttachments || remainingCredits !== undefined || temporary) && <div className="flex items-center justify-between gap-3 px-3 pb-2 text-[10px] text-[var(--muted)]"><span>{sending ? 'Enviando sua mensagem…' : fileError ? fileError : temporary ? <span className="flex items-center gap-1 text-lunar-500"><Clock3 className="h-3 w-3" /> Temporário · expira em 24 h</span> : <><span className="sm:hidden">3 anexos · 12 MB total</span><span className="hidden sm:inline">Até 3 anexos · 5 MB cada · 12 MB no total</span></>}</span>{unlimited ? <span className="flex shrink-0 items-center gap-1 text-lunar-500"><Coins className="h-3 w-3" /> Ilimitado</span> : remainingCredits !== undefined && remainingCredits !== null && <span className={`flex shrink-0 items-center gap-1 ${insufficientCredits ? 'text-red-400' : ''}`}><Coins className="h-3 w-3" /><span className="sm:hidden">{cost} · {remainingCredits}</span><span className="hidden sm:inline">Custo {cost} · Restam {remainingCredits}</span></span>}</div>}
+        {(allowAttachments || temporary) && <div className="px-3 pb-2 text-[10px] text-[var(--muted)]"><span>{sending ? 'Enviando sua mensagem…' : fileError ? fileError : temporary ? <span className="flex items-center gap-1 text-lunar-500"><Clock3 className="h-3 w-3" /> Temporário · expira em 24 h</span> : <><span className="sm:hidden">3 anexos · 12 MB total</span><span className="hidden sm:inline">Até 3 anexos · 5 MB cada · 12 MB no total</span></>}</span></div>}
       </div>
       <p className="mt-2 text-center text-[11px] text-zinc-500">A Lunatica pode cometer erros. Verifique informações importantes.</p>
     </div>

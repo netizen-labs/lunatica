@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, Brain, CircleAlert, Coins, Lightbulb, Orbit, PenLine, RefreshCw, Search, Sparkles, WifiOff, X } from 'lucide-react'
+import { ArrowRight, Brain, CircleAlert, Lightbulb, Orbit, PenLine, RefreshCw, Search, Sparkles, WifiOff, X } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MessageBubble } from '../components/chat/MessageBubble'
 import { MessageComposer } from '../components/chat/MessageComposer'
@@ -79,6 +79,9 @@ export function ChatPage() {
   const attachmentCount = chat.messages.reduce((total, message) => total + (message.attachments?.length ?? 0), 0)
   const contextLimitReached = Boolean(chat.activeId && chat.usage && !chat.usage.unlimited && ((chat.usage.conversation.messageLimit !== null && userMessageCount >= chat.usage.conversation.messageLimit) || (chat.usage.conversation.attachmentLimit !== null && attachmentCount >= chat.usage.conversation.attachmentLimit)))
   const dailyLimitReached = !chat.usage?.unlimited && chat.usage?.remaining === 0
+  const dailyLimitAlmostReached = Boolean(chat.usage && !chat.usage.unlimited && chat.usage.remaining !== null && chat.usage.limit !== null && chat.usage.remaining > 0 && chat.usage.remaining <= Math.max(3, Math.ceil(chat.usage.limit * 0.2)))
+  const conversationLimitAlmostReached = Boolean(chat.activeId && chat.usage && !chat.usage.unlimited && chat.usage.conversation.messageLimit !== null && userMessageCount < chat.usage.conversation.messageLimit && chat.usage.conversation.messageLimit - userMessageCount <= 2)
+  const limitAlmostReached = !dailyLimitReached && !contextLimitReached && (dailyLimitAlmostReached || conversationLimitAlmostReached)
   const temporaryActive = Boolean(activeConversation?.is_temporary || (!chat.activeId && temporaryMode))
 
   function openSettings(tab: SettingsTab) {
@@ -96,9 +99,6 @@ export function ChatPage() {
         userLabel={userLabel}
         username={profile?.username}
         avatarUrl={avatarUrl}
-        remainingCredits={chat.usage?.remaining}
-        creditLimit={chat.usage?.limit}
-        unlimited={chat.usage?.unlimited}
         onMobileClose={() => setMobileOpen(false)}
         onNewChat={newChat}
         onSelect={selectConversation}
@@ -115,7 +115,6 @@ export function ChatPage() {
           <MobileMenuButton onClick={() => setMobileOpen(true)} />
           <button type="button" className={`lunamax-button ${plan.isLunaMax ? 'active' : ''}`} onClick={() => openSettings('plan')}><Sparkles className="h-3.5 w-3.5" /><span>{plan.isLunaMax ? 'LunaMax ativo' : 'Adquirir LunaMax'}</span></button>
           <div className="min-w-0 flex-1" />
-          {chat.usage && <span className="status-pill hidden md:flex"><Coins className="h-3.5 w-3.5" /> {chat.usage.unlimited ? 'Ilimitado' : `${chat.usage.remaining} créditos`}</span>}
           {!online && <span className="flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-300"><WifiOff className="h-3.5 w-3.5" /> Offline</span>}
           <ChatHeaderActions conversation={activeConversation} temporaryMode={temporaryMode} onNewChat={newChat} onToggleTemporary={() => setTemporaryMode((value) => !value)} onTogglePin={chat.togglePinConversation} onRename={chat.renameConversation} onDelete={removeConversation} />
         </header>
@@ -142,7 +141,7 @@ export function ChatPage() {
         </div>
 
         <div className="composer-dock">
-          {dailyLimitReached || contextLimitReached ? <div className="limit-panel"><div className="limit-panel-icon"><Orbit className="h-5 w-5" /></div><div className="min-w-0 flex-1"><strong>{dailyLimitReached ? 'Seus créditos de hoje acabaram' : 'Esta conversa chegou ao limite de contexto'}</strong><p>{dailyLimitReached ? 'O limite gratuito volta no próximo ciclo. O LunaMax remove o limite de mensagens.' : 'Abra um chat limpo para continuar sem o contexto e os anexos desta conversa.'}</p></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><button type="button" className="btn-secondary" onClick={newChat}>Novo chat <ArrowRight className="h-4 w-4" /></button><button type="button" className="btn-primary" onClick={() => openSettings('plan')}>Ver LunaMax</button></div></div> : <MessageComposer generating={chat.generating} disabled={!online} allowAttachments remainingCredits={chat.usage?.remaining} unlimited={chat.usage?.unlimited} temporary={temporaryActive} onSend={send} onStop={chat.stopGeneration} />}
+          {dailyLimitReached || contextLimitReached ? <div className="limit-panel"><div className="limit-panel-icon"><Orbit className="h-5 w-5" /></div><div className="min-w-0 flex-1"><strong>{dailyLimitReached ? 'Seu limite gratuito terminou por hoje' : 'Esta conversa chegou ao limite de contexto'}</strong><p>{dailyLimitReached ? 'O acesso volta no próximo ciclo. Com o LunaMax, você continua criando sem interrupções.' : 'Abra um chat limpo para continuar sem o contexto e os anexos desta conversa.'}</p></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><button type="button" className="btn-secondary" onClick={newChat}>Novo chat <ArrowRight className="h-4 w-4" /></button><button type="button" className="btn-primary" onClick={() => openSettings('plan')}>Conhecer LunaMax</button></div></div> : <>{limitAlmostReached && <div className="limit-warning" role="status"><span><Sparkles className="h-4 w-4" /></span><div><strong>Seu limite gratuito está quase acabando</strong><p>Continue criando sem interrupções e faça mais com o LunaMax.</p></div><button type="button" className="btn-secondary shrink-0" onClick={() => openSettings('plan')}>Ver LunaMax</button></div>}<MessageComposer generating={chat.generating} disabled={!online} allowAttachments remainingCredits={chat.usage?.remaining} unlimited={chat.usage?.unlimited} temporary={temporaryActive} onSend={send} onStop={chat.stopGeneration} /></>}
         </div>
       </main>
 

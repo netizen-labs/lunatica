@@ -207,6 +207,11 @@
   .limit-panel-icon { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lunar-400/15 text-lunar-200; }
   .limit-panel strong { @apply text-sm text-zinc-100; }
   .limit-panel p { @apply mt-1 text-xs leading-5 text-zinc-500; }
+  .limit-warning { @apply mx-auto mb-3 flex w-[calc(100%_-_1.5rem)] max-w-4xl items-center gap-3 rounded-2xl border border-lunar-300/20 bg-lunar-500/[0.065] p-3 sm:w-[calc(100%_-_3rem)]; box-shadow: 0 12px 35px rgba(0,0,0,.2); }
+  .limit-warning > span { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lunar-400/15 text-lunar-200; }
+  .limit-warning > div { @apply min-w-0 flex-1; }
+  .limit-warning strong { @apply block text-sm text-zinc-100; }
+  .limit-warning p { @apply mt-0.5 text-[11px] leading-5 text-zinc-500; }
   .response-recovery { @apply mx-auto flex w-[calc(100%_-_2rem)] max-w-3xl flex-col items-start gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.06] p-4 sm:flex-row sm:items-center; }
   .response-recovery > span { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300; }
   .response-recovery > div { @apply min-w-0 flex-1; }
@@ -358,6 +363,9 @@
 :root.light .limit-panel { background: #f1ecff; border-color: #d3c6f6; box-shadow: 0 16px 40px rgba(55,40,84,.10); }
 :root.light .limit-panel strong { color: #332744; }
 :root.light .limit-panel p { color: #746c7e; }
+:root.light .limit-warning { background: #f4efff; border-color: #d8cdf3; box-shadow: 0 12px 34px rgba(55,40,84,.09); }
+:root.light .limit-warning strong { color: #332744; }
+:root.light .limit-warning p { color: #746c7e; }
 :root.light .response-recovery { color: #473720; background: #fff9e9; border-color: #eedca7; }
 :root.light .response-recovery > span { color: #9b6d12; background: #f8e9bd; }
 :root.light .plan-expired-banner,
@@ -389,6 +397,8 @@
   .response-recovery .btn-secondary { width: 100%; }
   .plan-expired-banner { @apply flex-wrap; }
   .plan-expired-banner .btn-primary { margin-left: 48px; flex: 1; }
+  .limit-warning { @apply flex-wrap; }
+  .limit-warning .btn-secondary { margin-left: 48px; flex: 1; }
   .composer-shell textarea { font-size: 16px; }
   .modal-header { position: sticky; top: -20px; z-index: 5; margin-left: -4px; margin-right: -4px; padding: 20px 4px 12px; background: var(--panel); }
 }

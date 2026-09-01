@@ -247,7 +247,7 @@ Deno.serve(async (request) => {
 
     const cost = 1 + attachments.length
     const usage = await usageStatus(admin, user.id, lunaMax)
-    if (!lunaMax && usage.remaining !== null && usage.remaining < cost) return jsonResponse({ error: `Limite diário insuficiente. Esta mensagem custa ${cost} crédito${cost === 1 ? '' : 's'}.` }, 429)
+    if (!lunaMax && usage.remaining !== null && usage.remaining < cost) return jsonResponse({ error: 'Seu limite gratuito terminou por hoje. Conheça o LunaMax para continuar sem interrupções.' }, 429)
 
     const { error: rateError } = await admin.from('rate_limits').insert({ user_id: user.id })
     if (rateError) throw rateError
