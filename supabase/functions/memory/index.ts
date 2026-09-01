@@ -63,8 +63,9 @@ Deno.serve(async (request) => {
     const { data: existing, error: existingError } = await userClient.from('memories').select('summary').order('updated_at', { ascending: false }).limit(30)
     if (existingError) throw existingError
 
-    const drafts = await summarizeMemories(content, (existing ?? []).map((item) => item.summary), manual, request.signal)
-    if (!drafts.length) return json({ created: [] })
+    const analysis = await summarizeMemories(content, (existing ?? []).map((item) => item.summary), manual, request.signal)
+    const drafts = analysis.memories
+    if (!drafts.length) return json({ created: [], recalled: analysis.recalled })
     const { error: rateError } = await admin.from('rate_limits').insert({ user_id: user.id })
     if (rateError) throw rateError
 
@@ -75,7 +76,7 @@ Deno.serve(async (request) => {
       if (error) throw error
       created.push(data)
     }
-    return json({ created })
+    return json({ created, recalled: false })
   } catch (error) {
     console.error('Memory function error', error instanceof Error ? error.message : 'unknown')
     return json({ error: error instanceof Error && /Gemini|memória|solicitações/i.test(error.message) ? error.message : 'Não foi possível salvar a memória.' }, 500)

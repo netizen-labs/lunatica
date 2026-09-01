@@ -75,4 +75,5 @@ export type MessageAttachment = Database['public']['Tables']['message_attachment
 export type Memory = Database['public']['Tables']['memories']['Row']
 export type UserPlan = Database['public']['Tables']['user_plans']['Row']
 export type RenderedAttachment = MessageAttachment & { previewUrl?: string }
-export type ChatMessage = Message & { attachments?: RenderedAttachment[] }
+export type MemoryActivity = 'saved' | 'recalled'
+export type ChatMessage = Message & { attachments?: RenderedAttachment[]; memoryActivity?: MemoryActivity }

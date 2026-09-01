@@ -52,7 +52,7 @@ export function MemoryPanel({ memories, loading, onAdd, onDelete }: MemoryPanelP
       <div className="rounded-2xl border border-lunar-400/15 bg-lunar-500/[0.055] p-4">
         <div className="flex items-start gap-3"><span className="memory-icon"><Brain className="h-4 w-4" /></span><div><h3 className="text-sm font-semibold">Banco de memória</h3><p className="mt-1 text-xs leading-5 text-zinc-500">A Lunatica pode reconhecer nome, estudos, trabalho, preferências, objetivos e projetos. Você sempre controla o que permanece salvo.</p></div></div>
         <label htmlFor="new-memory" className="mt-5 flex items-center gap-2 text-sm font-medium"><Plus className="h-4 w-4 text-lunar-300" /> Adicionar por conta própria</label>
-        <textarea id="new-memory" className="field mt-3 min-h-24 resize-y" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={800} placeholder="Ex.: Meu nome é Lucas e estou criando a Lunatica." />
+        <textarea id="new-memory" className="field mt-3 min-h-24 resize-y" value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={800} placeholder="Ex.: Prefiro respostas diretas e estou estudando desenvolvimento web." />
         <div className="mt-3 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"><span className="text-[11px] leading-5 text-zinc-500">O Gemini resume antes de salvar. Nunca informe senhas, chaves ou dados financeiros.</span><button type="button" className="btn-primary shrink-0" onClick={() => void add()} disabled={busy || !draft.trim()}>{busy ? 'Resumindo…' : 'Resumir e salvar'}</button></div>
       </div>
 

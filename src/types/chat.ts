@@ -30,6 +30,7 @@ export interface UsageStatus {
 
 export interface MemoryResponse {
   created: Memory[]
+  recalled: boolean
 }
 
 export interface ApiErrorBody {

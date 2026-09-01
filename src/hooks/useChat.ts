@@ -3,14 +3,14 @@ import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { cancelChatGeneration, getUsageStatus, streamChatResponse } from '../lib/api'
 import { createConversationTitle, friendlyError } from '../lib/utils'
-import type { ChatMessage, Conversation, Message, MessageAttachment, RenderedAttachment } from '../types/database'
+import type { ChatMessage, Conversation, MemoryActivity, Message, MessageAttachment, RenderedAttachment } from '../types/database'
 import type { UsageStatus } from '../types/chat'
 
 interface UseChatOptions {
   user: User
   session: Session
   onNotify: (message: string, kind?: 'success' | 'error' | 'info') => void
-  onAnalyzeMemory?: (messageId: string) => Promise<void>
+  onAnalyzeMemory?: (messageId: string) => Promise<MemoryActivity | null>
 }
 
 const MAX_ATTACHMENTS = 3
@@ -32,6 +32,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
   const abortRef = useRef<{ controller: AbortController; generationId: string } | null>(null)
   const activeIdRef = useRef<string | null>(null)
   const openRequestRef = useRef(0)
+  const memoryActivityRef = useRef(new Map<string, MemoryActivity>())
 
   useEffect(() => { activeIdRef.current = activeId }, [activeId])
 
@@ -128,7 +129,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
         attachments = await decorateAttachments(attachmentData)
       }
       if (requestId !== openRequestRef.current) return
-      setMessages(data.map((message) => ({ ...message, attachments: attachments.filter((file) => file.message_id === message.id) })))
+      setMessages(data.map((message) => ({ ...message, attachments: attachments.filter((file) => file.message_id === message.id), memoryActivity: memoryActivityRef.current.get(message.id) })))
     } catch (error) {
       if (requestId !== openRequestRef.current) return
       onNotify(friendlyError(error), 'error')
@@ -173,6 +174,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     if (activeIdRef.current === conversationId) setMessages((current) => [...current, temporaryMessage])
     let content = ''
     let streamError: unknown = null
+    let assistantMessageId: string | null = null
 
     try {
       try {
@@ -196,6 +198,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       if (persisted.status === 'failed') throw new Error(persisted.errorCode === 'RATE_LIMITED' ? '429: Limite do Gemini atingido' : 'Não foi possível concluir a resposta.')
       if (persisted.status === 'missing' && streamError) throw streamError
       if (persisted.assistant) {
+        assistantMessageId = persisted.assistant.id
         if (activeIdRef.current === conversationId) setMessages((current) => current.map((message) => message.id === temporaryId ? persisted.assistant! : message))
       } else if (streamError) {
         if (activeIdRef.current === conversationId) setMessages((current) => current.filter((message) => message.id !== temporaryId))
@@ -216,7 +219,15 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       setGenerating(false)
       void refreshUsage().catch((error: unknown) => { if (import.meta.env.DEV) console.error(error) })
     }
+    return assistantMessageId
   }, [onNotify, refreshConversations, refreshUsage, session, user.id, waitForGeneration])
+
+  const markMemoryActivity = useCallback((conversationId: string, assistantMessageId: string | null, activity: MemoryActivity | null) => {
+    if (!assistantMessageId || !activity) return
+    memoryActivityRef.current.set(assistantMessageId, activity)
+    if (activeIdRef.current !== conversationId) return
+    setMessages((current) => current.map((message) => message.id === assistantMessageId ? { ...message, memoryActivity: activity } : message))
+  }, [])
 
   const uploadFiles = useCallback(async (conversationId: string, messageId: string, files: File[]) => {
     if (files.length > MAX_ATTACHMENTS) throw new Error('Use no máximo 3 anexos')
@@ -283,10 +294,13 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       insertedMessageId = userMessage.id
       const attachments = files.length ? await uploadFiles(conversationId, userMessage.id, files) : []
       setMessages((current) => [...current, { ...userMessage, attachments }])
-      await generate(conversationId)
+      const targetConversationId = conversationId
+      const assistantMessageId = await generate(targetConversationId)
       // Memory classification starts after the answer so it never competes
       // with the latency-sensitive Gemini stream.
-      if (!isTemporary) void onAnalyzeMemory?.(userMessage.id)
+      if (!isTemporary && onAnalyzeMemory) {
+        void onAnalyzeMemory(userMessage.id).then((activity) => markMemoryActivity(targetConversationId, assistantMessageId, activity))
+      }
       return conversationId
     } catch (error) {
       if (!createdConversation && insertedMessageId) await supabase.from('messages').delete().eq('id', insertedMessageId)
@@ -295,7 +309,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       if (import.meta.env.DEV) console.error(error)
       return conversationId
     }
-  }, [activeId, conversations, generate, generating, messages, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
+  }, [activeId, conversations, generate, generating, markMemoryActivity, messages, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
 
   const removeStoredAttachments = useCallback(async (query: 'conversation' | 'messages' | 'all', value?: string | string[]) => {
     let request = supabase.from('message_attachments').select('storage_path')
@@ -390,9 +404,11 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     const { error: deleteError } = await supabase.from('messages').delete().eq('conversation_id', message.conversation_id).gt('created_at', message.created_at)
     if (deleteError) throw deleteError
     setMessages((current) => current.filter((item) => item.created_at <= message.created_at).map((item) => item.id === message.id ? { ...item, content } : item))
-    await generate(message.conversation_id)
-    void onAnalyzeMemory?.(message.id)
-  }, [generate, generating, onAnalyzeMemory, removeStoredAttachments])
+    const assistantMessageId = await generate(message.conversation_id)
+    if (onAnalyzeMemory) {
+      void onAnalyzeMemory(message.id).then((activity) => markMemoryActivity(message.conversation_id, assistantMessageId, activity))
+    }
+  }, [generate, generating, markMemoryActivity, onAnalyzeMemory, removeStoredAttachments])
 
   return { conversations, messages, usage, activeId, loadingConversations, loadingMessages, generating, openConversation, sendMessage, stopGeneration, retryGeneration, renameConversation, togglePinConversation, deleteConversation, clearHistory, regenerateMessage, editUserMessage, refreshUsage }
 }

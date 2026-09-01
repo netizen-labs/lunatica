@@ -5,6 +5,11 @@ export interface MemoryDraft {
   category: MemoryCategory
 }
 
+export interface MemoryAnalysis {
+  memories: MemoryDraft[]
+  recalled: boolean
+}
+
 const categories = new Set<MemoryCategory>(['identity', 'education', 'work', 'preference', 'personal', 'project', 'goal', 'custom'])
 
 export async function summarizeMemories(content: string, existing: string[], manual: boolean, signal: AbortSignal) {
@@ -18,7 +23,7 @@ Extraia apenas fatos estáveis e úteis sobre o próprio usuário: nome, estudo,
 Use a categoria "project" para algo que o usuário está construindo ou criando e "goal" para um objetivo duradouro.
 Não salve perguntas, pedidos momentâneos, dados sensíveis, senhas, chaves, informações financeiras, médicas ou inferências incertas.
 Escreva cada memória em português, em uma frase curta, objetiva e na terceira pessoa, começando com "O usuário".
-Não repita fatos já existentes. ${manual ? 'O usuário pediu explicitamente para memorizar o conteúdo; produza no máximo uma memória.' : 'Se não houver um fato pessoal estável, retorne uma lista vazia.'}
+Não repita fatos já existentes. Marque "recalled" como true somente quando o conteúdo novo repetir, atualizar ou se conectar claramente a uma das memórias existentes. Não marque por mera possibilidade ou porque existem memórias no banco. ${manual ? 'O usuário pediu explicitamente para memorizar o conteúdo; produza no máximo uma memória e mantenha recalled como false.' : 'Se não houver um fato pessoal estável novo, retorne uma lista vazia. Ainda assim, recalled pode ser true se o conteúdo reconhecer claramente uma memória existente.'}
 
 Memórias existentes:
 ${existing.length ? existing.map((item) => `- ${item}`).join('\n') : '- nenhuma'}
@@ -38,6 +43,7 @@ ${content.slice(0, 4000)}`
         responseSchema: {
               type: 'object',
               properties: {
+                recalled: { type: 'boolean' },
                 memories: {
                   type: 'array',
                   maxItems: manual ? 1 : 3,
@@ -51,7 +57,7 @@ ${content.slice(0, 4000)}`
                   },
                 },
               },
-              required: ['memories'],
+              required: ['memories', 'recalled'],
         },
       },
     }),
@@ -64,10 +70,11 @@ ${content.slice(0, 4000)}`
   }
   const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
   const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? ''
-  const parsed = JSON.parse(text) as { memories?: Array<{ summary?: unknown; category?: unknown }> }
-  return (parsed.memories ?? []).slice(0, manual ? 1 : 3).flatMap((item): MemoryDraft[] => {
+  const parsed = JSON.parse(text) as { recalled?: unknown; memories?: Array<{ summary?: unknown; category?: unknown }> }
+  const memories = (parsed.memories ?? []).slice(0, manual ? 1 : 3).flatMap((item): MemoryDraft[] => {
     const summary = typeof item.summary === 'string' ? item.summary.replace(/\s+/g, ' ').trim().slice(0, 300) : ''
     const category = typeof item.category === 'string' && categories.has(item.category as MemoryCategory) ? item.category as MemoryCategory : 'personal'
     return summary.length >= 3 ? [{ summary, category }] : []
   })
+  return { memories, recalled: !manual && parsed.recalled === true } satisfies MemoryAnalysis
 }

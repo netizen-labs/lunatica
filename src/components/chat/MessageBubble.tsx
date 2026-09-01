@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Check, Copy, FileText, Image, Pencil, RotateCcw, X } from 'lucide-react'
+import { BookOpen, Brain, Check, Copy, FileText, Image, Pencil, RotateCcw, X } from 'lucide-react'
 import type { ChatMessage, Message } from '../../types/database'
 import { copyText } from '../../lib/utils'
 import { useToast } from '../../contexts/ToastContext'
@@ -13,9 +13,10 @@ interface MessageBubbleProps {
   generating: boolean
   onRegenerate: (message: Message) => Promise<void>
   onEdit: (message: Message, content: string) => Promise<void>
+  onOpenMemory: () => void
 }
 
-export function MessageBubble({ message, canRegenerate, generating, onRegenerate, onEdit }: MessageBubbleProps) {
+export function MessageBubble({ message, canRegenerate, generating, onRegenerate, onEdit, onOpenMemory }: MessageBubbleProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(message.content)
   const [busy, setBusy] = useState(false)
@@ -67,6 +68,7 @@ export function MessageBubble({ message, canRegenerate, generating, onRegenerate
       <div className="flex gap-3 sm:gap-4">
         <LogoMark className="assistant-mark" />
         <div className="min-w-0 flex-1 pt-0.5">
+          {message.memoryActivity && <button type="button" className={`message-memory-note ${message.memoryActivity}`} onClick={onOpenMemory} aria-label={message.memoryActivity === 'saved' ? 'Abrir memória salva' : 'Abrir banco de memória'}>{message.memoryActivity === 'saved' ? <Brain className="h-3.5 w-3.5" /> : <BookOpen className="h-3.5 w-3.5" />}<span><strong>{message.memoryActivity === 'saved' ? 'Memória salva' : 'Relembrando da memória'}</strong><small>{message.memoryActivity === 'saved' ? 'Uma informação útil foi adicionada' : 'A Lunatica reconheceu algo que já sabia'}</small></span></button>}
           {message.content ? <Suspense fallback={<div className="h-16 animate-pulse rounded-xl bg-zinc-200/60 dark:bg-white/[0.04]" />}><MarkdownRenderer content={message.content} /></Suspense> : <div className="flex h-7 items-center gap-1" aria-label="Lunatica está pensando"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lunar-400" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lunar-400 [animation-delay:120ms]" /><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-lunar-400 [animation-delay:240ms]" /></div>}
           {message.content && <div className="mt-2 flex gap-0.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100"><button type="button" className="icon-btn !h-8 !w-8" onClick={copy} aria-label="Copiar resposta"><Copy className="h-3.5 w-3.5" /></button>{canRegenerate && <button type="button" className="icon-btn !h-8 !w-8" onClick={() => void onRegenerate(message)} disabled={generating} aria-label="Regenerar resposta"><RotateCcw className="h-3.5 w-3.5" /></button>}</div>}
         </div>

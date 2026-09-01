@@ -2,12 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { requestMemory } from '../lib/api'
 import { supabase } from '../lib/supabase'
-import type { Memory } from '../types/database'
+import type { Memory, MemoryActivity } from '../types/database'
 
 export function useMemories(session: Session) {
   const [memories, setMemories] = useState<Memory[]>([])
   const [loading, setLoading] = useState(true)
-  const [notice, setNotice] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     const { data, error } = await supabase.from('memories').select('*').order('updated_at', { ascending: false }).limit(50)
@@ -29,15 +28,17 @@ export function useMemories(session: Session) {
   const addCreated = useCallback((created: Memory[]) => {
     if (!created.length) return
     setMemories((current) => [...created, ...current.filter((item) => !created.some((next) => next.id === item.id))].slice(0, 50))
-    setNotice(created.length === 1 ? 'Memória salva' : `${created.length} memórias salvas`)
   }, [])
 
-  const analyzeMessage = useCallback(async (messageId: string) => {
+  const analyzeMessage = useCallback(async (messageId: string): Promise<MemoryActivity | null> => {
     try {
       const response = await requestMemory(session, { action: 'analyze', messageId })
       addCreated(response.created)
+      if (response.created.length) return 'saved'
+      return response.recalled ? 'recalled' : null
     } catch (error) {
       if (import.meta.env.DEV) console.error('Falha ao analisar memória', error)
+      return null
     }
   }, [addCreated, session])
 
@@ -53,5 +54,5 @@ export function useMemories(session: Session) {
     setMemories((current) => current.filter((memory) => memory.id !== id))
   }, [])
 
-  return { memories, loading, notice, clearNotice: () => setNotice(null), refresh, analyzeMessage, addMemory, deleteMemory }
+  return { memories, loading, refresh, analyzeMessage, addMemory, deleteMemory }
 }

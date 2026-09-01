@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, Brain, CircleAlert, Lightbulb, Orbit, PenLine, RefreshCw, Search, Sparkles, WifiOff, X } from 'lucide-react'
+import { ArrowRight, CircleAlert, Lightbulb, Orbit, PenLine, RefreshCw, Search, Sparkles, WifiOff, X } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MessageBubble } from '../components/chat/MessageBubble'
 import { MessageComposer } from '../components/chat/MessageComposer'
@@ -119,7 +119,6 @@ export function ChatPage() {
           <ChatHeaderActions conversation={activeConversation} temporaryMode={temporaryMode} onNewChat={newChat} onToggleTemporary={() => setTemporaryMode((value) => !value)} onTogglePin={chat.togglePinConversation} onRename={chat.renameConversation} onDelete={removeConversation} />
         </header>
 
-        {memory.notice && <button type="button" className="memory-saved-banner" onClick={() => { memory.clearNotice(); openSettings('memory') }}><span className="memory-pulse"><Brain className="h-3.5 w-3.5" /></span><span><strong>{memory.notice}</strong><small>Toque para revisar no banco de memória</small></span></button>}
         {plan.expiredPlan && !expiredDismissed && <div className="plan-expired-banner" role="status"><span><CircleAlert className="h-4 w-4" /></span><div><strong>Sua assinatura LunaMax terminou</strong><p>Você voltou ao plano gratuito. Ative uma nova chave quando quiser recuperar mensagens ilimitadas e busca na web.</p></div><button type="button" className="btn-primary shrink-0" onClick={() => openSettings('plan')}>Renovar</button><button type="button" className="icon-btn !h-8 !w-8 shrink-0" onClick={() => setExpiredDismissed(true)} aria-label="Fechar aviso"><X className="h-4 w-4" /></button></div>}
 
         <div className="chat-canvas min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
@@ -133,7 +132,7 @@ export function ChatPage() {
             </section>
           ) : (
             <div className="space-y-8 py-8 sm:space-y-10 sm:py-10">
-              {chat.messages.map((message) => <MessageBubble key={message.id} message={message} generating={chat.generating} canRegenerate={message.id === lastAssistantId} onRegenerate={chat.regenerateMessage} onEdit={chat.editUserMessage} />)}
+              {chat.messages.map((message) => <MessageBubble key={message.id} message={message} generating={chat.generating} canRegenerate={message.id === lastAssistantId} onRegenerate={chat.regenerateMessage} onEdit={chat.editUserMessage} onOpenMemory={() => openSettings('memory')} />)}
               {responsePending && <div className="response-recovery" role="status"><span><CircleAlert className="h-4 w-4" /></span><div><strong>A resposta não foi concluída</strong><p>Sua mensagem está salva. Você pode tentar gerar a resposta novamente sem repetir o texto.</p></div><button type="button" className="btn-secondary shrink-0" onClick={() => void chat.retryGeneration()}><RefreshCw className="h-4 w-4" /> Tentar novamente</button></div>}
               <div ref={bottomRef} />
             </div>

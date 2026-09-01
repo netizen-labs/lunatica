@@ -30,10 +30,10 @@ interface SettingsDialogProps {
 }
 
 const tabs = [
-  { id: 'general', label: 'Configurações', icon: Settings },
-  { id: 'memory', label: 'Memória', icon: Brain },
-  { id: 'plan', label: 'Assinatura', icon: Sparkles },
-  { id: 'important', label: 'Infos importantes', icon: Info },
+  { id: 'general', label: 'Geral', description: 'Tema, uso e conta', icon: Settings },
+  { id: 'memory', label: 'Memória', description: 'O que a Lunatica lembra', icon: Brain },
+  { id: 'plan', label: 'LunaMax', description: 'Plano e ativação', icon: Sparkles },
+  { id: 'important', label: 'Informações', description: 'Privacidade e avisos', icon: Info },
 ] as const
 
 function formatCode(value: string) {
@@ -86,7 +86,7 @@ export function SettingsDialog({ open, initialTab = 'general', usage, plan, expi
     <>
       <Modal open={open} onClose={onClose} title="Central da Lunatica" description="Sua conta, memória, assinatura e informações importantes." size="wide">
         <div className="settings-layout">
-          <nav className="settings-nav" aria-label="Seções das configurações">{tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setTab(id)} className={`settings-tab ${tab === id ? 'active' : ''}`} aria-current={tab === id ? 'page' : undefined}><Icon className="h-4 w-4" />{label}</button>)}</nav>
+          <nav className="settings-nav" aria-label="Seções das configurações">{tabs.map(({ id, label, description, icon: Icon }) => <button key={id} type="button" onClick={() => setTab(id)} className={`settings-tab ${tab === id ? 'active' : ''}`} aria-current={tab === id ? 'page' : undefined}><span className="settings-tab-icon"><Icon className="h-4 w-4" /></span><span><strong>{label}</strong><small>{description}</small></span></button>)}</nav>
 
           <div className="min-w-0">
             {tab === 'general' && <div>
