@@ -86,17 +86,13 @@
   .sidebar-feature strong { @apply block font-medium text-zinc-200; }
   .sidebar-feature span { @apply mt-1 block text-xs leading-5; }
 
-  .lunar-orbit { @apply pointer-events-none absolute rounded-full border border-lunar-400/10; }
-  .lunar-orbit::before { content: ''; @apply absolute h-1.5 w-1.5 rounded-full bg-lunar-300; box-shadow: 0 0 18px rgba(196,181,253,.75); }
-  .lunar-orbit-a { @apply -right-36 top-32 h-[480px] w-[480px]; transform: rotate(-18deg); }
-  .lunar-orbit-a::before { left: 56px; top: 82px; }
-  .lunar-orbit-b { @apply -bottom-52 left-1/4 h-[380px] w-[680px]; transform: rotate(12deg); }
-  .lunar-orbit-b::before { right: 88px; top: 30px; }
 
   .composer-dock { @apply shrink-0 pt-2; background: linear-gradient(to top, var(--app-bg) 72%, transparent); }
   .chat-canvas { position: relative; }
   .chat-canvas::before { content: ''; position: fixed; inset: 64px 0 0 296px; pointer-events: none; opacity: .28; background-image: radial-gradient(rgba(139,92,246,.16) .7px, transparent .7px); background-size: 28px 28px; mask-image: linear-gradient(to bottom, black, transparent 58%); }
-  .composer-shell { @apply overflow-hidden rounded-2xl border transition focus-within:border-lunar-400/60; background: var(--panel-elevated); box-shadow: 0 16px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.025); }
+  .composer-shell { @apply relative overflow-hidden rounded-2xl border transition focus-within:border-lunar-400/60; background: var(--panel-elevated); box-shadow: 0 16px 50px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.025); }
+  .composer-shell.is-dragging { @apply border-lunar-400 bg-lunar-500/[0.08]; box-shadow: 0 18px 60px rgba(69,42,128,.32), inset 0 0 0 1px rgba(196,181,253,.22); }
+  .attachment-drop-hint { @apply pointer-events-none absolute inset-0 z-20 flex items-center justify-center gap-2 bg-[#0b0910]/95 text-sm font-medium text-lunar-200; }
   .composer-action { @apply mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lunar-500 text-white transition hover:bg-lunar-400 disabled:bg-white/[0.07] disabled:text-zinc-600; }
   .composer-action.stop { @apply bg-white text-zinc-950 hover:bg-zinc-200; }
   .attachment-button { @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl px-2.5 text-xs text-zinc-500 transition hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-35; }
@@ -143,8 +139,10 @@
   .suggestion-square > span { @apply text-[9px] tracking-[.16em] text-zinc-600; }
   .suggestion-square > svg { @apply mt-5 text-lunar-300; }
   .suggestion-square > strong { @apply mt-auto text-xs font-medium leading-5 text-zinc-300; }
-  .empty-orbit { @apply pointer-events-none absolute h-[340px] w-[340px] rounded-full border border-lunar-400/[0.07] sm:h-[500px] sm:w-[500px]; transform: rotate(-17deg); }
-  .empty-orbit::before { content: ''; @apply absolute inset-9 rounded-full border border-white/[0.025]; }
+  .empty-signal { @apply mx-auto flex h-8 w-28 items-center justify-between; }
+  .empty-signal::before, .empty-signal::after { content: ''; @apply h-px w-8 bg-lunar-400/40; }
+  .empty-signal i { @apply block h-1.5 w-1.5 rotate-45 border border-lunar-300/80; }
+  .empty-signal i:nth-child(2) { @apply h-3 w-3 bg-lunar-400/15; box-shadow: 0 0 18px rgba(167,139,250,.18); }
 
   .message-memory-note { @apply mb-3 inline-flex items-center gap-2.5 rounded-xl border border-lunar-400/20 bg-lunar-500/[0.055] px-3 py-2 text-left transition hover:border-lunar-400/40 hover:bg-lunar-500/[0.09]; }
   .message-memory-note > svg { @apply shrink-0 text-lunar-300; }
@@ -326,8 +324,7 @@
 :root.light .guest-suggestion > svg { color: #6849c3; }
 :root.light .suggestion-square > span,
 :root.light .guest-suggestion > span { color: #a29aaa; }
-:root.light .empty-orbit { border-color: rgba(117,87,214,.13); }
-:root.light .empty-orbit::before { border-color: rgba(55,42,78,.05); }
+:root.light .empty-signal::before, :root.light .empty-signal::after { background: rgba(117,87,214,.35); }
 :root.light .message-memory-note { background: #f5f1ff; border-color: #ddd2f9; }
 :root.light .message-memory-note strong { color: #6546be; }
 :root.light .message-memory-note small { color: #81798a; }

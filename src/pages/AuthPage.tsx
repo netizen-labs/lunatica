@@ -81,8 +81,6 @@ export function AuthPage() {
           <p className="mt-6 max-w-md text-base leading-7 text-zinc-400">Suas conversas, seu perfil e suas instruções pessoais continuam sincronizados no seu espaço.</p>
         </div>
         <p className="text-xs text-zinc-600">Modelo Lunatica 1.5 · Suas conversas permanecem privadas</p>
-        <div className="lunar-orbit lunar-orbit-a" />
-        <div className="lunar-orbit lunar-orbit-b" />
       </section>
 
       <section className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] px-5 py-10 sm:px-10">

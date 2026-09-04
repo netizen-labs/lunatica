@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, Code2, Compass, History, Lightbulb, LogIn, Menu, Orbit, Search, ShieldCheck, Sparkles, UserPlus, X } from 'lucide-react'
+import { ArrowRight, Code2, Compass, History, Lightbulb, LogIn, Menu, Search, ShieldCheck, Sparkles, UserPlus, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { MessageComposer } from '../components/chat/MessageComposer'
 import { Logo } from '../components/ui/Logo'
@@ -45,13 +45,11 @@ export function GuestPage() {
       {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden"><button type="button" className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" /><div className="relative h-full w-[min(88vw,320px)] animate-slide-in [&_.guest-sidebar]:!w-full">{sidebar}</div></div>}
 
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="lunar-orbit lunar-orbit-a" aria-hidden="true" />
         <header className="mission-header relative z-10"><button type="button" onClick={() => setMobileOpen(true)} className="icon-btn lg:hidden" aria-label="Abrir menu"><Menu className="h-5 w-5" /></button><Logo compact className="lg:hidden" /><div className="hidden min-w-0 flex-1 items-center gap-3 lg:flex"><span className="micro-label">MODELO LUNATICA 1.5</span><span className="status-dot">online</span></div><div className="ml-auto flex items-center gap-2"><button type="button" onClick={openLogin} className="hidden px-3 py-2 text-sm text-zinc-500 transition hover:text-lunar-600 dark:text-zinc-400 dark:hover:text-white sm:inline-flex">Entrar</button><button type="button" onClick={openSignup} className="btn-primary !px-3.5 !py-2">Criar conta <ArrowRight className="h-4 w-4" /></button></div></header>
 
         <div className="chat-canvas relative z-[1] min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
           <section className="mx-auto flex min-h-full w-full max-w-5xl flex-col items-center justify-center px-5 py-12 text-center lg:px-10">
-            <div className="empty-orbit" aria-hidden="true" />
-            <div className="relative animate-fade-in"><span className="micro-label inline-flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> MODELO LUNATICA 1.5</span><h1 className="mt-5 text-5xl font-semibold leading-none tracking-[-.065em] sm:text-7xl">Como posso ajudar?</h1><p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[var(--muted)] sm:text-base">Programação de verdade, escrita cuidadosa e ideias que não param na primeira resposta.</p><div className="mt-7 flex justify-center gap-2"><button type="button" onClick={openSignup} className="btn-primary"><Sparkles className="h-4 w-4" /> Começar agora</button><button type="button" onClick={openLogin} className="btn-secondary"><LogIn className="h-4 w-4" /> Entrar</button></div></div>
+            <div className="relative animate-fade-in"><span className="empty-signal" aria-hidden="true"><i /><i /><i /></span><span className="micro-label mt-5 inline-flex items-center gap-2">LUNATICA 1.5 · SINAL ABERTO</span><h1 className="mt-5 text-5xl font-semibold leading-none tracking-[-.065em] sm:text-7xl">Como posso ajudar?</h1><p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[var(--muted)] sm:text-base">Código que chega à causa, texto com pulso e ideias que saem do rascunho. Sem resposta de vitrine.</p><div className="mt-7 flex justify-center gap-2"><button type="button" onClick={openSignup} className="btn-primary"><Sparkles className="h-4 w-4" /> Começar agora</button><button type="button" onClick={openLogin} className="btn-secondary"><LogIn className="h-4 w-4" /> Entrar</button></div></div>
             <div className="relative mt-10 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">{suggestions.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" onClick={() => setDraft(prompt)} className="suggestion-square"><span>0{index + 1}</span><Icon className="h-5 w-5" /><strong>{label}</strong></button>)}</div>
           </section>
         </div>

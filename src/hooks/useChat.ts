@@ -16,7 +16,7 @@ interface UseChatOptions {
 const MAX_ATTACHMENTS = 3
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024
 const MAX_TOTAL_SIZE = 12 * 1024 * 1024
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'image/avif', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'])
+const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'])
 function safeFileName(name: string) {
   return name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'anexo'
 }
@@ -258,7 +258,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
 
   const sendMessage = useCallback(async (rawContent: string, files: File[] = [], temporaryMode = false) => {
     const content = rawContent.trim() || (files.length ? 'Analise os anexos enviados.' : '')
-    if (!content || generating) return activeId
+    if (!content || generating) return null
     const cost = 1 + files.length
     const activeConversation = conversations.find((conversation) => conversation.id === activeId)
     const isTemporary = activeConversation?.is_temporary ?? temporaryMode
@@ -268,11 +268,11 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
     const attachmentLimit = usage?.conversation.attachmentLimit
     if (activeId && !usage?.unlimited && ((messageLimit !== null && messageLimit !== undefined && userMessageCount >= messageLimit) || (attachmentLimit !== null && attachmentLimit !== undefined && conversationAttachmentCount + files.length > attachmentLimit))) {
       onNotify('Esta conversa atingiu o limite de contexto. Comece um novo chat limpo para continuar.', 'info')
-      return activeId
+      return null
     }
     if (usage && usage.remaining !== null && usage.remaining < cost) {
       onNotify('Seu limite gratuito terminou por hoje. Conheça o LunaMax para continuar sem interrupções.', 'error')
-      return activeId
+      return null
     }
     let conversationId = activeId
     let createdConversation = false
@@ -307,7 +307,7 @@ export function useChat({ user, session, onNotify, onAnalyzeMemory }: UseChatOpt
       if (createdConversation && conversationId) await supabase.from('conversations').delete().eq('id', conversationId)
       onNotify(friendlyError(error), 'error')
       if (import.meta.env.DEV) console.error(error)
-      return conversationId
+      return null
     }
   }, [activeId, conversations, generate, generating, markMemoryActivity, messages, onAnalyzeMemory, onNotify, uploadFiles, usage, user.id])
 

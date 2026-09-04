@@ -65,8 +65,6 @@ export function OnboardingPage() {
 
   return (
     <main className="app-shell relative min-h-screen overflow-hidden px-5 py-7 sm:px-8">
-      <div className="lunar-orbit lunar-orbit-a" aria-hidden="true" />
-      <div className="lunar-orbit lunar-orbit-b" aria-hidden="true" />
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between"><Logo /><span className="micro-label">PREPARAÇÃO · {step + 1}/3</span></header>
       <section className="relative z-10 mx-auto mt-10 grid max-w-6xl overflow-hidden rounded-[28px] border border-white/10 bg-[var(--panel)] shadow-2xl lg:grid-cols-[.82fr_1.18fr]">
         <aside className="border-b border-white/10 bg-[#0a0910] p-7 lg:border-b-0 lg:border-r lg:p-10">

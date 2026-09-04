@@ -58,6 +58,7 @@ export function ChatPage() {
   async function send(content: string, files: File[] = []) {
     const id = await chat.sendMessage(content, files, temporaryMode)
     if (id && id !== conversationId) navigate(`/chat/${id}`, { replace: true })
+    return Boolean(id)
   }
 
   async function removeConversation(id: string) {
@@ -126,8 +127,7 @@ export function ChatPage() {
             <div className="mx-auto max-w-3xl space-y-8 px-6 py-10">{Array.from({ length: 3 }).map((_, index) => <div key={index} className={`h-20 animate-pulse rounded-2xl bg-zinc-200/70 dark:bg-white/[0.04] ${index % 2 === 0 ? 'ml-auto w-2/3' : 'w-full'}`} />)}</div>
           ) : chat.messages.length === 0 ? (
             <section className="relative mx-auto flex min-h-full w-full max-w-5xl flex-col items-center justify-center px-5 py-12 text-center">
-              <div className="empty-orbit" aria-hidden="true" />
-              <div className="relative"><span className="micro-label inline-flex items-center gap-2"><Orbit className="h-3.5 w-3.5" /> LUNATICA 1.5</span><h2 className="mt-5 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">Como posso ajudar?</h2><p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[var(--muted)]">Traga um bug, um rascunho ou uma ideia. Eu entro exatamente no ponto em que você parou.</p></div>
+              <div className="relative"><span className="empty-signal" aria-hidden="true"><i /><i /><i /></span><span className="micro-label mt-5 inline-flex items-center gap-2">LUNATICA 1.5 · SINAL ABERTO</span><h2 className="mt-5 text-4xl font-semibold tracking-[-.055em] sm:text-6xl">Como posso ajudar?</h2><p className="mx-auto mt-4 max-w-lg text-sm leading-6 text-[var(--muted)]">Jogue a parte difícil aqui. Eu organizo o caos, explico o raciocínio e fico até a ideia funcionar.</p></div>
               <div className="relative mt-10 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">{suggestions.map(({ label, prompt, icon: Icon }, index) => <button key={label} type="button" onClick={() => void send(prompt)} className="suggestion-square"><span className="text-[9px] tracking-[.16em] text-zinc-600">0{index + 1}</span><Icon className="h-5 w-5 text-lunar-300" /><strong>{label}</strong></button>)}</div>
             </section>
           ) : (
